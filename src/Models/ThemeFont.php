@@ -52,7 +52,7 @@ class ThemeFont extends DataObject
 
         if ($this->ID) {
             $fields->addFieldsToTab('Root.Main', [
-                TextField::create('FontFamily', 'FontFamily')
+                TextField::create('FontFamily', 'Font Family')
                     ->setReadOnly(!$this->canChangeFontFamily())
                     ->setDescription($this->canChangeFontFamily() ? 'Paste the font family you want to use. Eg: <code>Roboto, sans-serif</code>' : 'This is the default theme font "' . $this->CustomID . '" and cannot be changed.'),
             ]);
