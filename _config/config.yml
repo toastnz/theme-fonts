@@ -1,0 +1,17 @@
+---
+Name: toastfonts
+---
+
+PageController:
+  extensions:
+    - Toast\ThemeFonts\Extensions\PageControllerExtension
+
+Toast\ThemeFonts\Models:
+  default_fonts:
+    - body: null
+    - headings: null
+
+
+SilverStripe\SiteConfig\SiteConfig:
+  extensions:
+    - Toast\ThemeFonts\Extensions\SiteConfigExtension
