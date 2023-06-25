@@ -51,6 +51,9 @@ class Helper
 
         // get current fonts
         foreach ($fonts as $font) {
+            // Make sure there is a font family before adding it to the array
+            if (!$font->FontFamily) continue;
+            // Add the font to the array
             $fontFormats[] = [
                 'title'          => $font->Title,
                 'selector'       => '*',
