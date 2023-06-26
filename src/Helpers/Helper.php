@@ -113,8 +113,16 @@ class Helper
                 // Create a new file for the editor
                 $editorStyles = $CSSVars;
 
+                
                 // Loop through fonts and add styles
                 foreach ($fonts as $font) {
+                    if ($font->FontFiles) {
+                        foreach ($font->FontFiles as $fontFile) {
+                            $themeStyles .= $fontFile.getFontFaceCSS();
+                            $editorStyles .= $fontFile.getFontFaceCSS();
+                        }
+                    }
+
                     if ($font->FontFamily) {
                         $className = $font->getFontFamilyClassName();
                         // Theme styles
@@ -126,13 +134,6 @@ class Helper
                         $editorStyles .= 'body.mce-content-body  .font-family--' . $className . '{';
                         $editorStyles .= 'font-family: var(--' . $className . ');';
                         $editorStyles .= '}';
-                    }
-
-                    if ($font->FontFiles) {
-                        foreach ($font->FontFiles() as $fontFile) {
-                            $themeStyles .= $fontFile.getFontFaceCSS();
-                            $editorStyles .= $fontFile.getFontFaceCSS();
-                        }
                     }
                 }
 

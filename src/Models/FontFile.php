@@ -24,7 +24,6 @@ class FontFile extends DataObject
 
     private static $db = [
         'SortOrder' => 'Int',
-        'Title' => 'Varchar(255)',
         'Weight' => 'Enum("100,200,300,400,500,600,700,800,900","400")',
         'Style' => 'Enum("normal,italic","normal")',
     ];
@@ -43,7 +42,6 @@ class FontFile extends DataObject
     ];
 
     private static $summary_fields = [
-        'Title' => 'Title',
         'Weight' => 'Weight',
         'Style' => 'Style',
     ];
@@ -53,11 +51,7 @@ class FontFile extends DataObject
     public function getCMSFields()
     {
         $fields = parent::getCMSFields();
-        $fields->removeByName(['SortOrder', 'ThemeFontID']);
-
-        $fields->addFieldsToTab('Root.Main', [
-            TextField::create('Title', 'Title')->setDescription('Eg: <code>Roboto Thin</code>'),
-        ]);
+        $fields->removeByName(['SortOrder', 'ThemeFontID', 'ThemeFontFiles']);
 
         if ($this->ID) {
             $fields->addFieldsToTab('Root.Main', [
@@ -92,7 +86,7 @@ class FontFile extends DataObject
 
     public function getCMSValidator()
     {
-        $required = new RequiredFields(['Title', 'ThemeFontFiles']);
+        $required = new RequiredFields(['ThemeFontFiles']);
 
         $this->extend('updateCMSValidator', $required);
 
@@ -112,12 +106,11 @@ class FontFile extends DataObject
     public function getFontFaceCSS() {
         $fontFaceCSS = '';
 
-        var_dump($this->ThemeFontFiles()->exists());
-        die();
+        
 
         if ($this->ThemeFontFiles()->exists()) {
             $fontFaceCSS .= '@font-face {';
-            $fontFaceCSS .= 'font-family: "' . $this->Title . '";';
+            $fontFaceCSS .= 'font-family: "' . $this->ThemeFont->Title . '";';
             $fontFaceCSS .= 'font-weight: ' . $this->Weight . ';';
             $fontFaceCSS .= 'font-style: ' . $this->Style . ';';
             $fontFaceCSS .= 'src: ';

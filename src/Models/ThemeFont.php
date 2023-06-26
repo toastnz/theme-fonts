@@ -10,8 +10,9 @@ use Toast\Forms\IconOptionsetField;
 use SilverStripe\Security\Security;
 use SilverStripe\Control\Controller;
 use SilverStripe\Forms\LiteralField;
-use SilverStripe\Forms\RequiredFields;
 use Toast\ThemeFonts\Helpers\Helper;
+use Toast\ThemeFonts\Models\FontFile;
+use SilverStripe\Forms\RequiredFields;
 use SilverStripe\SiteConfig\SiteConfig;
 
 class ThemeFont extends DataObject
@@ -27,6 +28,10 @@ class ThemeFont extends DataObject
 
     private static $has_many = [
         'FontFiles' => FontFile::class
+    ];
+
+    private static $owns = [
+        'FontFiles',
     ];
 
     private static $belongs_many_many = [
