@@ -125,7 +125,6 @@ class ThemeFont extends DataObject
     public function onBeforeWrite()
     {
         parent::onBeforeWrite();
-
         // If the title is empty, set it to the CustomID
         if (!$this->Title) {
             // If we have a CustomID, set the Title to that
@@ -134,18 +133,23 @@ class ThemeFont extends DataObject
 
         // Convert the title to all lowercase
         $this->Title = strtolower($this->Title);
+
     }
 
-
+    /**
+     * Event handler called after writing to the database.
+     * 
+     * @uses DataExtension->onAfterWrite()
+     */
     public function onAfterWrite()
     {
-        parent::onAfterWrite();
-
          // if database and siteconfig is ready, run this
          if (Security::database_is_ready()) {
             if ($this->ID && Helper::getCurrentSiteConfig()) Helper::generateCSSFiles();
         }
-    }
+        parent::onAfterWrite();
+        
+    } 
 
     public function requireDefaultRecords()
     {

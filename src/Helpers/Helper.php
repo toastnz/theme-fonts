@@ -98,7 +98,6 @@ class Helper
                         $CSSVars .= '--' . $font->getFontFamilyClassName() . ': ' . $font->FontFamily . ';';
                     }
                 }
-
                 // Close the file
                 $CSSVars .= '}';
 
@@ -115,7 +114,7 @@ class Helper
                 
                 // Loop through fonts and add styles
                 foreach ($fonts as $font) {
-                    if ($font->FontFiles()->exists()) {
+                    if ($font->FontFiles()) {
                         foreach ($font->FontFiles() as $fontFile) {
                             $themeStyles .= $fontFile->getFontFaceCSS();
                             $editorStyles .= $fontFile->getFontFaceCSS();
