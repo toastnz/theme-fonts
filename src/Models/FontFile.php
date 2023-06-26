@@ -106,17 +106,15 @@ class FontFile extends DataObject
     public function getFontFaceCSS() {
         $fontFaceCSS = '';
 
-        
-
         if ($this->ThemeFontFiles()->exists()) {
             $fontFaceCSS .= '@font-face {';
-            $fontFaceCSS .= 'font-family: "' . $this->ThemeFont->Title . '";';
+            $fontFaceCSS .= 'font-family: "' . $this->ThemeFont->FontFamily . '";';
             $fontFaceCSS .= 'font-weight: ' . $this->Weight . ';';
             $fontFaceCSS .= 'font-style: ' . $this->Style . ';';
             $fontFaceCSS .= 'src: ';
 
             foreach ($this->ThemeFontFiles() as $fontFile) {
-                $fontFaceCSS .= 'url("' . $fontFile->ThemeFontFiles()->URL . '")' . (($fontFile->ThemeFontFiles()->ID != $this->ThemeFontFiles()->last()->ID) ? ', ' : ';');
+                $fontFaceCSS .= 'url("' . $fontFile->URL . '")' . (($fontFile->ID != $this->ThemeFontFiles()->last()->ID) ? ', ' : ';');
             }
 
             $fontFaceCSS .= '}';

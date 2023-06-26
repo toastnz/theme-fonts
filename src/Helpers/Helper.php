@@ -116,10 +116,10 @@ class Helper
                 
                 // Loop through fonts and add styles
                 foreach ($fonts as $font) {
-                    if ($font->FontFiles) {
-                        foreach ($font->FontFiles as $fontFile) {
-                            $themeStyles .= $fontFile.getFontFaceCSS();
-                            $editorStyles .= $fontFile.getFontFaceCSS();
+                    if ($font->FontFiles()->exists()) {
+                        foreach ($font->FontFiles() as $fontFile) {
+                            $themeStyles .= $fontFile->getFontFaceCSS();
+                            $editorStyles .= $fontFile->getFontFaceCSS();
                         }
                     }
 
