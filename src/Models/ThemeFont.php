@@ -13,7 +13,6 @@ use SilverStripe\Forms\LiteralField;
 use SilverStripe\Forms\RequiredFields;
 use Toast\ThemeFonts\Helpers\Helper;
 use SilverStripe\SiteConfig\SiteConfig;
-use Toast\ThemeFonts\Tasks\GenerateThemeCssFileTask;
 
 class ThemeFont extends DataObject
 {
@@ -24,6 +23,10 @@ class ThemeFont extends DataObject
         'Title' => 'Varchar(255)',
         'CustomID' => 'Varchar(255)',
         'FontFamily' => 'Varchar(255)',
+    ];
+
+    private static $has_many = [
+        'FontFiles' => FontFile::class
     ];
 
     private static $belongs_many_many = [

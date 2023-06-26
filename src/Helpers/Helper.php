@@ -127,6 +127,13 @@ class Helper
                         $editorStyles .= 'font-family: var(--' . $className . ');';
                         $editorStyles .= '}';
                     }
+
+                    if ($font->FontFiles) {
+                        foreach ($font->FontFiles() as $fontFile) {
+                            $themeStyles .= $fontFile.getFontFaceCSS();
+                            $editorStyles .= $fontFile.getFontFaceCSS();
+                        }
+                    }
                 }
 
                 // Write to file
