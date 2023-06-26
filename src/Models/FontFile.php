@@ -111,7 +111,7 @@ class FontFile extends DataObject
 
         if ($this->ThemeFontFiles()->exists()) {
             $fontFaceCSS .= '@font-face {';
-            $fontFaceCSS .= 'font-family: "' . $this->ThemeFont->FontFamily . '";';
+            $fontFaceCSS .= 'font-family: "' . explode(',', $this->ThemeFont->FontFamily)[0] . '";';
             $fontFaceCSS .= 'font-weight: ' . $this->Weight . ';';
             $fontFaceCSS .= 'font-style: ' . $this->Style . ';';
             $fontFaceCSS .= 'src: ';
