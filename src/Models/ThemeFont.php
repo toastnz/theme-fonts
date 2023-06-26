@@ -14,6 +14,10 @@ use Toast\ThemeFonts\Helpers\Helper;
 use Toast\ThemeFonts\Models\FontFile;
 use SilverStripe\Forms\RequiredFields;
 use SilverStripe\SiteConfig\SiteConfig;
+use SilverStripe\Forms\GridField\GridField;
+use SilverStripe\Forms\GridField\GridFieldAddNewButton;
+use Symbiote\GridFieldExtensions\GridFieldOrderableRows;
+use SilverStripe\Forms\GridField\GridFieldConfig_RecordEditor;
 
 class ThemeFont extends DataObject
 {
@@ -50,19 +54,28 @@ class ThemeFont extends DataObject
     public function getCMSFields()
     {
         $fields = parent::getCMSFields();
-        $fields->removeByName(['SortOrder','SiteConfig','CustomID']);
+        $fields->removeByName(['SortOrder','SiteConfig','CustomID', 'FontFiles']);
 
         $fields->addFieldsToTab('Root.Main', [
             TextField::create('Title', 'Title')
                 ->setReadOnly(!$this->canChangeFontFamily())
-                ->setDescription($this->canChangeFontFamily() ? (($this->CustomID) ? 'e.g. "' . $this->CustomID . '" - ' : '') . 'Please limit to 30 characters' : 'This is the default theme font "' . $this->CustomID . '" and cannot be changed.'),
+                ->setDescription($this->canChangeFontFamily() ? (($this->CustomID) ? 'e.g. "' . $this->CustomID . '" - ' : '') . 'For your reference only' : 'This is the default theme font "' . $this->CustomID . '" and cannot be changed.'),
         ]);
 
+        $config = GridFieldConfig_RecordEditor::create(10);
+        $config->removeComponentsByType('GridFieldAddExistingAutoCompleter')
+            ->addComponent(GridFieldOrderableRows::create('SortOrder'));
+
         if ($this->ID) {
+
+            $grid = GridField::create('FontFiles', 'Font Files', $this->FontFiles(), $config);
+
             $fields->addFieldsToTab('Root.Main', [
                 TextField::create('FontFamily', 'Font Family')
                     ->setReadOnly(!$this->canChangeFontFamily())
-                    ->setDescription($this->canChangeFontFamily() ? 'Paste the font family you want to use. Eg: <code>Roboto, sans-serif</code>' : 'This is the default theme font "' . $this->CustomID . '" and cannot be changed.'),
+                    ->setDescription($this->canChangeFontFamily() ? 'Paste the font-family css value. Eg: <code>Roboto, sans-serif</code>' : 'This is the default theme font "' . $this->CustomID . '" and cannot be changed.'),
+                    $grid,
+                LiteralField::create('', '<div class="message notice">Font files are only required if this font is not available using @import</div>'),
             ]);
         } else {
             // Hide the CustomID field
