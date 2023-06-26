@@ -73,7 +73,6 @@ class Helper
 
     static function generateCSSFiles()
     {
-
         // Get the current site's config
         if ($siteConfig = self::getCurrentSiteConfig()){
             // Get the site' ID and append to the css file name

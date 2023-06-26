@@ -53,23 +53,26 @@ class FontFile extends DataObject
         $fields = parent::getCMSFields();
         $fields->removeByName(['SortOrder', 'ThemeFontID', 'ThemeFontFiles']);
 
+        $fields->addFieldsToTab('Root.Main', [
+            DropdownField::create('Weight', 'Weight', [
+                '100' => 'Thin 100',
+                '200' => 'Extra Light 200',
+                '300' => 'Light 300',
+                '400' => 'Normal 400',
+                '500' => 'Medium 500',
+                '600' => 'Semi Bold 600',
+                '700' => 'Bold 700',
+                '800' => 'Extra Bold 800',
+                '900' => 'Black 900',
+            ]),
+            DropdownField::create('Style', 'Style', [
+                'normal' => 'Normal',
+                'italic' => 'Italic',
+            ]),
+        ]);
+
         if ($this->ID) {
             $fields->addFieldsToTab('Root.Main', [
-                DropdownField::create('Weight', 'Weight', [
-                    '100' => 'Thin 100',
-                    '200' => 'Extra Light 200',
-                    '300' => 'Light 300',
-                    '400' => 'Normal 400',
-                    '500' => 'Medium 500',
-                    '600' => 'Semi Bold 600',
-                    '700' => 'Bold 700',
-                    '800' => 'Extra Bold 800',
-                    '900' => 'Black 900',
-                ]),
-                DropdownField::create('Style', 'Style', [
-                    'normal' => 'Normal',
-                    'italic' => 'Italic',
-                ]),
                 UploadField::create('ThemeFontFiles', 'Font Files')
                     ->setFolderName('fonts')
                     ->setAllowedExtensions(['woff', 'woff2', 'ttf', 'eot', 'svg', 'otf'])
@@ -77,7 +80,7 @@ class FontFile extends DataObject
             ]);
         } else {
             // Hide the CustomID field
-            $fields->removeByName(['ThemeFontFiles', 'Weight', 'Style']);
+            $fields->removeByName(['ThemeFontFiles']);
             $fields->insertAfter('Title', LiteralField::create('', '<div class="message notice">Upload field will become available after creating.</div>'));
         }
 
