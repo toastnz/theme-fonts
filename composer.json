@@ -28,9 +28,6 @@
     "undefinedoffset/sortablegridfield": "^2.0.4"
   },
   "extra": {
-    "resources-dir": "_resources",
-    "expose": [
-        "client/images"
-    ]
+    "resources-dir": "_resources"
   }
 }
