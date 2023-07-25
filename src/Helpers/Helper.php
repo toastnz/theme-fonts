@@ -73,7 +73,6 @@ class Helper
 
     static function generateCSSFiles()
     {
-
         // Get the current site's config
         if ($siteConfig = self::getCurrentSiteConfig()){
             // Get the site' ID and append to the css file name
@@ -99,7 +98,6 @@ class Helper
                         $CSSVars .= '--' . $font->getFontFamilyClassName() . ': ' . $font->FontFamily . ';';
                     }
                 }
-
                 // Close the file
                 $CSSVars .= '}';
 
@@ -113,8 +111,16 @@ class Helper
                 // Create a new file for the editor
                 $editorStyles = $CSSVars;
 
+                
                 // Loop through fonts and add styles
                 foreach ($fonts as $font) {
+                    if ($font->FontFiles()) {
+                        foreach ($font->FontFiles() as $fontFile) {
+                            $themeStyles .= $fontFile->getFontFaceCSS();
+                            $editorStyles .= $fontFile->getFontFaceCSS();
+                        }
+                    }
+
                     if ($font->FontFamily) {
                         $className = $font->getFontFamilyClassName();
                         // Theme styles

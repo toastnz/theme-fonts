@@ -10,10 +10,14 @@ use Toast\Forms\IconOptionsetField;
 use SilverStripe\Security\Security;
 use SilverStripe\Control\Controller;
 use SilverStripe\Forms\LiteralField;
-use SilverStripe\Forms\RequiredFields;
 use Toast\ThemeFonts\Helpers\Helper;
+use Toast\ThemeFonts\Models\FontFile;
+use SilverStripe\Forms\RequiredFields;
 use SilverStripe\SiteConfig\SiteConfig;
-use Toast\ThemeFonts\Tasks\GenerateThemeCssFileTask;
+use SilverStripe\Forms\GridField\GridField;
+use SilverStripe\Forms\GridField\GridFieldAddNewButton;
+use Symbiote\GridFieldExtensions\GridFieldOrderableRows;
+use SilverStripe\Forms\GridField\GridFieldConfig_RecordEditor;
 
 class ThemeFont extends DataObject
 {
@@ -24,6 +28,14 @@ class ThemeFont extends DataObject
         'Title' => 'Varchar(255)',
         'CustomID' => 'Varchar(255)',
         'FontFamily' => 'Varchar(255)',
+    ];
+
+    private static $has_many = [
+        'FontFiles' => FontFile::class
+    ];
+
+    private static $owns = [
+        'FontFiles',
     ];
 
     private static $belongs_many_many = [
@@ -42,19 +54,28 @@ class ThemeFont extends DataObject
     public function getCMSFields()
     {
         $fields = parent::getCMSFields();
-        $fields->removeByName(['SortOrder','SiteConfig','CustomID']);
+        $fields->removeByName(['SortOrder','SiteConfig','CustomID', 'FontFiles']);
 
         $fields->addFieldsToTab('Root.Main', [
             TextField::create('Title', 'Title')
                 ->setReadOnly(!$this->canChangeFontFamily())
-                ->setDescription($this->canChangeFontFamily() ? (($this->CustomID) ? 'e.g. "' . $this->CustomID . '" - ' : '') . 'Please limit to 30 characters' : 'This is the default theme font "' . $this->CustomID . '" and cannot be changed.'),
+                ->setDescription($this->canChangeFontFamily() ? (($this->CustomID) ? 'e.g. "' . $this->CustomID . '" - ' : '') . 'For your reference only' : 'This is the default theme font "' . $this->CustomID . '" and cannot be changed.'),
         ]);
 
+        $config = GridFieldConfig_RecordEditor::create(10);
+        $config->removeComponentsByType('GridFieldAddExistingAutoCompleter')
+            ->addComponent(GridFieldOrderableRows::create('SortOrder'));
+
         if ($this->ID) {
+
+            $grid = GridField::create('FontFiles', 'Font Files', $this->FontFiles(), $config);
+
             $fields->addFieldsToTab('Root.Main', [
                 TextField::create('FontFamily', 'Font Family')
                     ->setReadOnly(!$this->canChangeFontFamily())
-                    ->setDescription($this->canChangeFontFamily() ? 'Paste the font family you want to use. Eg: <code>Roboto, sans-serif</code>' : 'This is the default theme font "' . $this->CustomID . '" and cannot be changed.'),
+                    ->setDescription($this->canChangeFontFamily() ? 'Paste the font-family css value. Eg: <code>Roboto, sans-serif</code>' : 'This is the default theme font "' . $this->CustomID . '" and cannot be changed.'),
+                    $grid,
+                LiteralField::create('', '<div class="message">Font files are only required if this font is not available using @import. Font files will be required for each font weight and style. e.g. If you require Roboto bold, and Roboto bold italic, you will need to upload these as 2 separate font files.</div>'),
             ]);
         } else {
             // Hide the CustomID field
@@ -104,7 +125,6 @@ class ThemeFont extends DataObject
     public function onBeforeWrite()
     {
         parent::onBeforeWrite();
-
         // If the title is empty, set it to the CustomID
         if (!$this->Title) {
             // If we have a CustomID, set the Title to that
@@ -113,18 +133,23 @@ class ThemeFont extends DataObject
 
         // Convert the title to all lowercase
         $this->Title = strtolower($this->Title);
+
     }
 
-
+    /**
+     * Event handler called after writing to the database.
+     * 
+     * @uses DataExtension->onAfterWrite()
+     */
     public function onAfterWrite()
     {
-        parent::onAfterWrite();
-
          // if database and siteconfig is ready, run this
          if (Security::database_is_ready()) {
             if ($this->ID && Helper::getCurrentSiteConfig()) Helper::generateCSSFiles();
         }
-    }
+        parent::onAfterWrite();
+        
+    } 
 
     public function requireDefaultRecords()
     {
