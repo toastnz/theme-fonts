@@ -15,8 +15,8 @@ Fonts with a value will be locked and not editable in the CMS
 Fonts with null value will be editable in the CMS
 
 ```yaml
-Toast\ThemeColours\Models:
-  default_colours:
+Toast\ThemeFonts\Models:
+  default_fonts:
     - body: null
     - headings: null
     - comic-sans: 'comic-sans'
