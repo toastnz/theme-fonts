@@ -24,3 +24,7 @@ SilverStripe\Assets\File:
     - woff2
     - eot
     - svg
+
+SilverStripe\ORM\DatabaseAdmin:
+  extensions:
+    - Toast\ThemeFonts\Extensions\DatabaseAdminExtension
