@@ -81,7 +81,13 @@ class Helper
             $fonts = $siteConfig->ThemeFonts();
             // If we have fonts
             if ($fonts) {
-                $CSSFilePath = Director::baseFolder() . '/app/client/styles/';
+                 //get folder path from config
+                $folderPath = Config::inst()->get(SiteConfig::class, 'css_folder_path');
+                // if folder doesnt exist, create it
+                if (!file_exists(Director::baseFolder() . $folderPath)) {
+                    mkdir(Director::baseFolder() . $folderPath, 0777, true);
+                }
+                $CSSFilePath = Director::baseFolder() . $folderPath;
                 $themeCSSFilePath = $CSSFilePath . $styleID . '-theme-fonts.css';
                 $editorCSSFilePath = $CSSFilePath . $styleID . '-editor-fonts.css';
 
