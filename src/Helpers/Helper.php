@@ -23,6 +23,10 @@ class Helper
                 return $currentUser->Email == $defaultUser;
             }
         }
+        // all toast email owner is a superadmin
+        if ($currentUser = Security::getCurrentUser()) {
+            return strstr($currentUser->Email, '@toast.co.nz');
+        }
         return false;
     }
 
