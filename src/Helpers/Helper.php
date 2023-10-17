@@ -21,7 +21,7 @@ class Helper
         if ($defaultUser = Environment::getEnv('SS_DEFAULT_ADMIN_USERNAME')) {
             if ($currentUser = Security::getCurrentUser()) {
                  // all toast email owner is a superadmin
-                return $currentUser->Email == $defaultUser || strstr('$currentUser->Email', '@toast.co.nz');
+                return $currentUser->Email == $defaultUser || strstr($currentUser->Email, '@toast.co.nz');
             }
         }
         return false;
