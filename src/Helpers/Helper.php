@@ -18,10 +18,18 @@ class Helper
 {
     static function isSuperAdmin()
     {
-        if ($defaultUser = Environment::getEnv('SS_DEFAULT_ADMIN_USERNAME')) {
+         if ($defaultUser = Environment::getEnv('SS_DEFAULT_ADMIN_USERNAME')) {
             if ($currentUser = Security::getCurrentUser()) {
-                 // all toast email owner is a superadmin
-                return $currentUser->Email == $defaultUser || strstr($currentUser->Email, '@toast.co.nz');
+                $allowed = false;
+                // all toast email owner is a superadmin
+                if($currentUser->Email == $defaultUser || strstr($currentUser->Email, '@toast.co.nz')){
+                    $allowed = true;
+                }
+
+               // extend this method
+                $currentUser->extend('updateSuperAdmin', $allowed);
+                
+                return $allowed;
             }
         }
         return false;
