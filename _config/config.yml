@@ -15,6 +15,7 @@ Toast\ThemeFonts\Models:
 SilverStripe\SiteConfig\SiteConfig:
   extensions:
     - Toast\ThemeFonts\Extensions\SiteConfigExtension
+  css_folder_path: '/public/assets/styles/'
 
 SilverStripe\Assets\File:
   allowed_extensions:
@@ -24,3 +25,7 @@ SilverStripe\Assets\File:
     - woff2
     - eot
     - svg
+
+SilverStripe\ORM\DatabaseAdmin:
+  extensions:
+    - Toast\ThemeFonts\Extensions\DatabaseAdminExtension

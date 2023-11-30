@@ -18,9 +18,18 @@ class Helper
 {
     static function isSuperAdmin()
     {
-        if ($defaultUser = Environment::getEnv('SS_DEFAULT_ADMIN_USERNAME')) {
+         if ($defaultUser = Environment::getEnv('SS_DEFAULT_ADMIN_USERNAME')) {
             if ($currentUser = Security::getCurrentUser()) {
-                return $currentUser->Email == $defaultUser;
+                $allowed = false;
+                // all toast email owner is a superadmin
+                if($currentUser->Email == $defaultUser || strstr($currentUser->Email, '@toast.co.nz')){
+                    $allowed = true;
+                }
+
+               // extend this method
+                $currentUser->extend('updateSuperAdmin', $allowed);
+                
+                return $allowed;
             }
         }
         return false;
@@ -81,7 +90,13 @@ class Helper
             $fonts = $siteConfig->ThemeFonts();
             // If we have fonts
             if ($fonts) {
-                $CSSFilePath = Director::baseFolder() . '/app/client/styles/';
+                 //get folder path from config
+                $folderPath = Config::inst()->get(SiteConfig::class, 'css_folder_path');
+                // if folder doesnt exist, create it
+                if (!file_exists(Director::baseFolder() . $folderPath)) {
+                    mkdir(Director::baseFolder() . $folderPath, 0777, true);
+                }
+                $CSSFilePath = Director::baseFolder() . $folderPath;
                 $themeCSSFilePath = $CSSFilePath . $styleID . '-theme-fonts.css';
                 $editorCSSFilePath = $CSSFilePath . $styleID . '-editor-fonts.css';
 
