@@ -110,7 +110,7 @@ class Helper
                 // Loop through fonts and add CSS vars
                 foreach ($fonts as $font) {
                     if ($font->FontFamily) {
-                        $CSSVars .= '--' . $font->getFontFamilyClassName() . ': ' . $font->FontFamily . ';';
+                        $CSSVars .= '--' . $font->getFontFamilyClassName() . ': ' . $font->FontFamily || 'inherit' . ';';
                     }
                 }
                 // Close the file
