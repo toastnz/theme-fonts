@@ -21,13 +21,14 @@ use SilverStripe\Forms\GridField\GridFieldConfig_RelationEditor;
 class SiteConfigExtension extends DataExtension
 {
     private static $db = [
+        'ThemeFontsLinks' => 'HTMLText',
         'ThemeFontsImports' => 'HTMLText',
     ];
-    
+
     private static $many_many = [
         'ThemeFonts' => ThemeFont::class,
     ];
-    
+
     public function updateCMSFields(FieldList $fields)
     {
         /** -----------------------------------------
@@ -51,6 +52,9 @@ class SiteConfigExtension extends DataExtension
             }
 
             $fields->addFieldsToTab('Root.Customization.FontFamilies', [
+                LiteralField::create('FontsImportWarning', '<div class="message warning"><strong>Please Note:</strong> Only 1 of these fields needs to be populated. For better performance it is recommended to use the Font Links rather than Font Imports.</div>'),
+                TextareaField::create('ThemeFontsLinks', 'Font Links')
+                    ->setDescription('Paste the links to the fonts you want to use. Eg: <code><link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet"></code>'),
                 TextareaField::create('ThemeFontsImports', 'Font Imports')
                     ->setDescription('Paste the links to the fonts you want to use. Eg: <code>@import url(\'https://fonts.googleapis.com/css2?family=\');</code>'),
                 $fontsField,
