@@ -28,7 +28,7 @@ class Helper
 
                // extend this method
                 $currentUser->extend('updateSuperAdmin', $allowed);
-                
+
                 return $allowed;
             }
         }
@@ -104,7 +104,7 @@ class Helper
                 if (file_exists($themeCSSFilePath)) unlink($themeCSSFilePath);
                 if (file_exists($editorCSSFilePath)) unlink($editorCSSFilePath);
 
-                // Create a new file 
+                // Create a new file
                 $CSSVars = ':root {';
 
                 // Loop through fonts and add CSS vars
@@ -116,9 +116,12 @@ class Helper
                 // Close the file
                 $CSSVars .= '}';
 
-                // Load the theme's fonts imports to the file
-                if ($siteConfig->ThemeFontsImports) {
-                    $CSSVars .= $siteConfig->ThemeFontsImports;
+                // If the ThemeFontsLinks field is empty
+                if (!$siteConfig->ThemeFontsLinks) {
+                    // Load the theme's fonts imports to the file
+                    if ($siteConfig->ThemeFontsImports) {
+                        $CSSVars .= $siteConfig->ThemeFontsImports;
+                    }
                 }
 
                 // Create a new file for the theme
@@ -126,7 +129,7 @@ class Helper
                 // Create a new file for the editor
                 $editorStyles = $CSSVars;
 
-                
+
                 // Loop through fonts and add styles
                 foreach ($fonts as $font) {
                     if ($font->FontFiles()) {
@@ -151,7 +154,7 @@ class Helper
                 }
 
                 // Write to file
-                try { 
+                try {
                     file_put_contents($themeCSSFilePath, $themeStyles);
                     file_put_contents($editorCSSFilePath, $editorStyles);
                 } catch (\Exception $e) {
