@@ -110,7 +110,12 @@ class Helper
                 // Loop through fonts and add CSS vars
                 foreach ($fonts as $font) {
                     if ($font->FontFamily) {
-                        $CSSVars .= '--' . $font->getFontFamilyClassName() . ': ' . $font->FontFamily . ';';
+                        // Trim any trailing spacing from the font family
+                        $family = trim($font->FontFamily);
+                        // Remove any ; at the end of the string
+                        $family = rtrim($family, ';');
+                        // Add the CSS var
+                        $CSSVars .= '--' . $font->getFontFamilyClassName() . ': ' . $family . ';';
                     }
                 }
                 // Close the file
