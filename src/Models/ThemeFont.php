@@ -68,14 +68,17 @@ class ThemeFont extends DataObject
 
         if ($this->ID) {
 
+            $fields->addFieldsToTab('Root.Main', [
+                TextField::create('FontFamily', 'Font Family')
+                    ->setReadOnly(!$this->canChangeFontFamily())
+                    ->setDescription($this->canChangeFontFamily() ? 'Paste the font-family css value. Eg: <code>Roboto, sans-serif</code>' : 'This is the default theme font "' . $this->CustomID . '" and cannot be changed.'),
+            ]);
+
             $grid = GridField::create('FontFiles', 'Font Files', $this->FontFiles(), $config);
 
             $fields->addFieldsToTab('Root.Files', [
                 LiteralField::create('', '<div class="message">Font files are only required if this font is not available using @import. Font files will be required for each font weight and style. e.g. If you require Roboto bold, and Roboto bold italic, you will need to upload these as 2 separate font files.</div>'),
-                TextField::create('FontFamily', 'Font Family')
-                    ->setReadOnly(!$this->canChangeFontFamily())
-                    ->setDescription($this->canChangeFontFamily() ? 'Paste the font-family css value. Eg: <code>Roboto, sans-serif</code>' : 'This is the default theme font "' . $this->CustomID . '" and cannot be changed.'),
-                    $grid,
+                $grid,
             ]);
         } else {
             // Hide the CustomID field
