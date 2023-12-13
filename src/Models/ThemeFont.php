@@ -70,12 +70,12 @@ class ThemeFont extends DataObject
 
             $grid = GridField::create('FontFiles', 'Font Files', $this->FontFiles(), $config);
 
-            $fields->addFieldsToTab('Root.Main', [
+            $fields->addFieldsToTab('Root.Files', [
+                LiteralField::create('', '<div class="message">Font files are only required if this font is not available using @import. Font files will be required for each font weight and style. e.g. If you require Roboto bold, and Roboto bold italic, you will need to upload these as 2 separate font files.</div>'),
                 TextField::create('FontFamily', 'Font Family')
                     ->setReadOnly(!$this->canChangeFontFamily())
                     ->setDescription($this->canChangeFontFamily() ? 'Paste the font-family css value. Eg: <code>Roboto, sans-serif</code>' : 'This is the default theme font "' . $this->CustomID . '" and cannot be changed.'),
                     $grid,
-                LiteralField::create('', '<div class="message">Font files are only required if this font is not available using @import. Font files will be required for each font weight and style. e.g. If you require Roboto bold, and Roboto bold italic, you will need to upload these as 2 separate font files.</div>'),
             ]);
         } else {
             // Hide the CustomID field
@@ -138,7 +138,7 @@ class ThemeFont extends DataObject
 
     /**
      * Event handler called after writing to the database.
-     * 
+     *
      * @uses DataExtension->onAfterWrite()
      */
     public function onAfterWrite()
@@ -148,8 +148,8 @@ class ThemeFont extends DataObject
             if ($this->ID && Helper::getCurrentSiteConfig()) Helper::generateCSSFiles();
         }
         parent::onAfterWrite();
-        
-    } 
+
+    }
 
     public function requireDefaultRecords()
     {
@@ -211,7 +211,7 @@ class ThemeFont extends DataObject
             $retrictions[$name] = [
                 'FontFamily' => ($value) ? true : false,
             ];
-            
+
             // True means the field is read only
         }
 
