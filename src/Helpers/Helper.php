@@ -69,7 +69,7 @@ class Helper
             $title = ucwords($title);
 
             $fontFormats[] = [
-                'title'          => 'Fonts / ' . $title,
+                'title'          => 'Font Family / ' . $title,
                 'selector'       => '*',
                 'classes'        => 'font-family--' . $font->FontFamilyClassName,
                 'wrapper'        => true,
