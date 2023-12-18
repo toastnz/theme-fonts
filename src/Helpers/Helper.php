@@ -63,8 +63,13 @@ class Helper
             // Make sure there is a font family before adding it to the array
             if (!$font->FontFamily) continue;
             // Add the font to the array
+
+            // Grab the title and make it title case
+            $title = $font->Title;
+            $title = ucwords($title);
+
             $fontFormats[] = [
-                'title'          => $font->Title,
+                'title'          => 'Fonts / ' . $title,
                 'selector'       => '*',
                 'classes'        => 'font-family--' . $font->FontFamilyClassName,
                 'wrapper'        => true,
