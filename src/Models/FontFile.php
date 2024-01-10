@@ -116,7 +116,7 @@ class FontFile extends DataObject
 
      /**
      * Event handler called after writing to the database.
-     * 
+     *
      * @uses DataExtension->onAfterWrite()
      */
     public function onAfterWrite()
@@ -126,8 +126,8 @@ class FontFile extends DataObject
             if ($this->ID && Helper::getCurrentSiteConfig()) Helper::generateCSSFiles();
         }
         parent::onAfterWrite();
-        
-    } 
+
+    }
 
     public function getFontFaceCSS() {
         $fontFaceCSS = '';
@@ -137,6 +137,7 @@ class FontFile extends DataObject
             $fontFaceCSS .= 'font-family: "' . explode(',', $this->ThemeFont->FontFamily)[0] . '";';
             $fontFaceCSS .= 'font-weight: ' . $this->Weight . ';';
             $fontFaceCSS .= 'font-style: ' . $this->Style . ';';
+            $fontFaceCSS .= 'font-display: swap;';
             $fontFaceCSS .= 'src: ';
 
             foreach ($this->ThemeFontFiles() as $fontFile) {
