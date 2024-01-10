@@ -154,13 +154,11 @@ class Helper
                         // Theme styles
                         $themeStyles .= '.font-family--' . $className . '{';
                         $themeStyles .= 'font-family: var(--' . $className . ');';
-                        $themeStyles .= 'font-display: swap;';
                         $themeStyles .= '}';
 
                         // Editor styles
                         $editorStyles .= 'body.mce-content-body  .font-family--' . $className . '{';
                         $editorStyles .= 'font-family: var(--' . $className . ');';
-                        $themeStyles .= 'font-display: swap;';
                         $editorStyles .= '}';
                     }
                 }
