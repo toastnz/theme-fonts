@@ -55,7 +55,7 @@ class SiteConfigExtension extends DataExtension
             $fields->addFieldsToTab('Root.Customization.FontFamilies', [
                 LiteralField::create('FontsImportWarning', '<div class="message warning"><strong>Please Note:</strong> For better performance it is recommended to use the Font Links rather than Font Imports (only one is required). To prevent render blocking and improve performance scores, use the Lazy Load option below</div>'),
                 TextareaField::create('ThemeFontsLazy', 'Lazy Load Fonts')
-                    ->setDescription('Paste just the href value (https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap). The link tags will then be generated for you to look something like <code>&lt;link rel="preload" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" as="style" onload="this.onload=null;this.rel=\'stylesheet\'"&gt;</code>'),
+                    ->setDescription('Paste just the href value <code>https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap</code>. The link tags will then be generated for you to look something like <code>&lt;link rel="preload" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" as="style" onload="this.onload=null;this.rel=\'stylesheet\'"&gt;</code>'),
                 TextareaField::create('ThemeFontsLinks', 'Font Links')
                     ->setDescription('Paste the links to the fonts you want to use. Eg: <code>&lt;link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet"&gt;</code>'),
                 TextareaField::create('ThemeFontsImports', 'Font Imports')
