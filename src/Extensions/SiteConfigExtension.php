@@ -85,4 +85,5 @@ class SiteConfigExtension extends DataExtension
             $html .= '<link rel="preload" href="' . $font . '" as="style" onload="this.onload=null;this.rel=\'stylesheet\'">';
         }
         return $html;
+    }
 }
