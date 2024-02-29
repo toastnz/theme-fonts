@@ -82,6 +82,9 @@ class SiteConfigExtension extends DataExtension
         $fonts = preg_split('/\s+/', $fonts);
         $html = '';
         foreach ($fonts as $font) {
+            // Make sure the value is not empty
+            if (!$font || empty($font)) continue;
+            // Add the preload link
             $html .= '<link rel="preload" href="' . $font . '" as="style" onload="this.onload=null;this.rel=\'stylesheet\'">';
         }
         return $html;
