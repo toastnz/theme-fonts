@@ -21,9 +21,8 @@ use SilverStripe\Forms\GridField\GridFieldConfig_RelationEditor;
 class SiteConfigExtension extends DataExtension
 {
     private static $db = [
-        'ThemeFontsLazy' => 'HTMLText',
-        'ThemeFontsLinks' => 'HTMLText',
-        'ThemeFontsImports' => 'HTMLText',
+        'ThemeFontLinks' => 'Text',
+        'ThemeFontCache' => 'HTMLText',
     ];
 
     private static $many_many = [
@@ -52,14 +51,12 @@ class SiteConfigExtension extends DataExtension
                 $fields->addFieldToTab('Root', TabSet::create('Customization'));
             }
 
+            // Remove the cache field
+            $fields->removeByName('ThemeFontCache');
+
             $fields->addFieldsToTab('Root.Customization.FontFamilies', [
-                LiteralField::create('FontsImportWarning', '<div class="message warning"><strong>Please Note:</strong> For better performance it is recommended to use the Font Links rather than Font Imports (only one is required). To prevent render blocking and improve performance scores, use the Lazy Load option below</div>'),
-                TextareaField::create('ThemeFontsLazy', 'Lazy Load Fonts')
-                    ->setDescription('Paste just the href value <code>https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap</code>. The link tags will then be generated for you to look something like <code>&lt;link rel="preload" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" as="style" onload="this.onload=null;this.rel=\'stylesheet\'"&gt;</code>'),
-                TextareaField::create('ThemeFontsLinks', 'Font Links')
-                    ->setDescription('Paste the links to the fonts you want to use. Eg: <code>&lt;link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet"&gt;</code>'),
-                TextareaField::create('ThemeFontsImports', 'Font Imports')
-                    ->setDescription('Paste the links to the fonts you want to use. Eg: <code>@import url(\'https://fonts.googleapis.com/css2?family=\');</code>'),
+                TextareaField::create('ThemeFontLinks', 'Font Links')
+                    ->setDescription('Paste only the href value, for example <code>https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap</code>.'),
                 $fontsField,
             ]);
         }
@@ -76,17 +73,62 @@ class SiteConfigExtension extends DataExtension
         Helper::generateCSSFiles();
     }
 
-    public function getPreloadFonts()
+    // On before write, update the preload cache
+    public function onBeforeWrite()
     {
-        $fonts = $this->owner->ThemeFontsLazy;
-        $fonts = preg_split('/\s+/', $fonts);
+        parent::onBeforeWrite();
+        $this->updatePreloadCache();
+    }
+
+    public function updatePreloadCache()
+    {
         $html = '';
+
+        // Preload the ThemeFonts
+        $fonts = $this->owner->ThemeFontLinks;
+        $fonts = preg_split('/\s+/', $fonts);
         foreach ($fonts as $font) {
             // Make sure the value is not empty
             if (!$font || empty($font)) continue;
             // Add the preload link
             $html .= '<link rel="preload" href="' . $font . '" as="font" type="font/woff2" crossorigin>';
         }
-        return $html;
+
+        // Preload the FontFiles
+        $themeFonts = $this->owner->ThemeFonts();
+
+        $processedUrls = [];
+
+        foreach ($themeFonts as $themeFont) {
+            $fontFiles = $themeFont->FontFiles();
+            foreach ($fontFiles as $fontFile) {
+                $uploadedFiles = $fontFile->ThemeFontFiles();
+                foreach ($uploadedFiles as $uploadedFile) {
+                    // Make sure the URL is not empty
+                    if (!$uploadedFile->URL || empty($uploadedFile->URL)) continue;
+
+                    // If this URL has already been processed, skip it
+                    if (isset($processedUrls[$uploadedFile->URL])) continue;
+
+                    // Extract the type from the URL (e.g. woff2)
+                    $type = pathinfo($uploadedFile->URL, PATHINFO_EXTENSION);
+
+                    // Add the preload link
+                    $html .= '<link rel="preload" href="' . $uploadedFile->URL . '" as="font" type="font/' . $type . '" crossorigin>';
+
+                    // Mark this URL as processed
+                    $processedUrls[$uploadedFile->URL] = true;
+                }
+            }
+        }
+
+        // Save the HTML to the database
+        $this->owner->ThemeFontCache = $html;
+    }
+
+    public function getPreloadFonts()
+    {
+        // Return the cached HTML
+        return $this->owner->ThemeFontCache;
     }
 }
