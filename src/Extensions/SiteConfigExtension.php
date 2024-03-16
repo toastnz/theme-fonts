@@ -100,7 +100,7 @@ class SiteConfigExtension extends DataExtension
             // Add the preload link
             if ($index === $lastIndex) {
                 // For the last font, add an onload event that adds a 'fonts-loaded' class to the document.body
-                $onload .= ';document.body.classList.add(\'fonts-loaded\')';
+                $onload .= ';document.documentElement.classList.add(\'fonts-loaded\')';
             }
 
             $html .= '<link rel="preload" href="' . $font . '" as="style" onload="' . $onload . '">';
@@ -109,7 +109,7 @@ class SiteConfigExtension extends DataExtension
 
         // If no fonts were loaded, add a script tag that adds the 'fonts-loaded' class to the document.body
         if (!$fontsAdded) {
-            $html .= '<script>document.body.classList.add(\'fonts-loaded\');</script>';
+            $html .= '<script>document.documentElement.classList.add(\'fonts-loaded\');</script>';
         }
 
         // Preload the FontFiles
