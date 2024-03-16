@@ -114,7 +114,7 @@ class SiteConfigExtension extends DataExtension
                     $type = pathinfo($uploadedFile->URL, PATHINFO_EXTENSION);
 
                     // Add the preload link
-                    $html .= '<link rel="preload" href="' . $uploadedFile->URL . '" as="font" type="font/' . $type . '" crossorigin>';
+                    $html .= '<link rel="preload" href="' . $uploadedFile->URL . '" as="font" type="font/' . $type . '" crossorigin onload="this.rel=\'stylesheet\'">';
 
                     // Mark this URL as processed
                     $processedUrls[$uploadedFile->URL] = true;
