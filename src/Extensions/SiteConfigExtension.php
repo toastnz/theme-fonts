@@ -91,7 +91,7 @@ class SiteConfigExtension extends DataExtension
             // Make sure the value is not empty
             if (!$font || empty($font)) continue;
             // Add the preload link
-            $html .= '<link rel="preload" href="' . $font . '" as="font" type="font/woff2" crossorigin>';
+            $html .= '<link rel="preload" href="' . $font . '" as="font" type="font/woff2" crossorigin onload="this.onload=null;this.rel=\'stylesheet\'">';
         }
 
         // Preload the FontFiles
@@ -114,7 +114,7 @@ class SiteConfigExtension extends DataExtension
                     $type = pathinfo($uploadedFile->URL, PATHINFO_EXTENSION);
 
                     // Add the preload link
-                    $html .= '<link rel="preload" href="' . $uploadedFile->URL . '" as="font" type="font/' . $type . '" crossorigin onload="this.rel=\'stylesheet\'">';
+                    $html .= '<link rel="preload" href="' . $uploadedFile->URL . '" as="font" type="font/' . $type . '" crossorigin>';
 
                     // Mark this URL as processed
                     $processedUrls[$uploadedFile->URL] = true;
