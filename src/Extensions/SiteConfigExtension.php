@@ -91,7 +91,7 @@ class SiteConfigExtension extends DataExtension
             // Make sure the value is not empty
             if (!$font || empty($font)) continue;
             // Add the preload link
-            $html .= '<link rel="preload" href="' . $font . '" as="font" type="font/woff2" crossorigin onload="this.onload=null;this.rel=\'stylesheet\'">';
+            $html .= '<link rel="preload" href="' . $font . '" onload="this.onload=null;this.rel=\'stylesheet\'">';
         }
 
         // Preload the FontFiles
