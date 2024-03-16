@@ -88,6 +88,7 @@ class SiteConfigExtension extends DataExtension
         $fonts = $this->owner->ThemeFontLinks;
         $fonts = preg_split('/\s+/', $fonts);
         $lastIndex = count($fonts) - 1;
+        $fontsAdded = false;
 
         foreach ($fonts as $index => $font) {
             // Make sure the value is not empty
@@ -103,6 +104,12 @@ class SiteConfigExtension extends DataExtension
             }
 
             $html .= '<link rel="preload" href="' . $font . '" as="style" onload="' . $onload . '">';
+            $fontsAdded = true;
+        }
+
+        // If no fonts were loaded, add a script tag that adds the 'fonts-loaded' class to the document.body
+        if (!$fontsAdded) {
+            $html .= '<script>document.body.classList.add(\'fonts-loaded\');</script>';
         }
 
         // Preload the FontFiles
