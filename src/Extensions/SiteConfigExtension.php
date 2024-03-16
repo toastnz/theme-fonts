@@ -87,11 +87,22 @@ class SiteConfigExtension extends DataExtension
         // Preload the ThemeFonts
         $fonts = $this->owner->ThemeFontLinks;
         $fonts = preg_split('/\s+/', $fonts);
-        foreach ($fonts as $font) {
+        $lastIndex = count($fonts) - 1;
+
+        foreach ($fonts as $index => $font) {
             // Make sure the value is not empty
             if (!$font || empty($font)) continue;
+
+            // Set the common onload attribute
+            $onload = 'this.onload=null;this.rel=\'stylesheet\'';
+
             // Add the preload link
-            $html .= '<link rel="preload" href="' . $font . '" onload="this.onload=null;this.rel=\'stylesheet\'" as="style">';
+            if ($index === $lastIndex) {
+                // For the last font, add an onload event that adds a 'fonts-loaded' class to the document.body
+                $onload .= ';document.body.classList.add(\'fonts-loaded\')';
+            }
+
+            $html .= '<link rel="preload" href="' . $font . '" as="style" onload="' . $onload . '">';
         }
 
         // Preload the FontFiles
