@@ -148,7 +148,7 @@ class ThemeFont extends DataObject
     {
          // if database and siteconfig is ready, run this
          if (Security::database_is_ready()) {
-            if ($this->ID && Helper::getCurrentSiteConfig()) Helper::generateCSSFiles();
+            if ($this->ID && Helper::getCurrentSiteConfig()) Helper::generateRequiredFiles();
         }
         parent::onAfterWrite();
 

@@ -85,7 +85,69 @@ class Helper
         return $formats;
     }
 
-    static function generateCSSFiles()
+    static function getFontLinks($siteConfig) {
+        $html = '';
+
+        // Preload the ThemeFonts
+        $fonts = $siteConfig->ThemeFontLinks;
+        $fonts = preg_split('/\s+/', $fonts);
+        $lastIndex = count($fonts) - 1;
+        $fontsAdded = false;
+
+        foreach ($fonts as $index => $font) {
+            // Make sure the value is not empty
+            if (!$font || empty($font)) continue;
+
+            // Set the common onload attribute
+            $onload = 'this.onload=null;this.rel=\'stylesheet\'';
+
+            // Add the preload link
+            if ($index === $lastIndex) {
+                // For the last font, add an onload event that adds a 'fonts-loaded' class to the document.body
+                $onload .= ';document.documentElement.classList.add(\'fonts-loaded\')';
+            }
+
+            $html .= '<link rel="preload" href="' . $font . '" as="style" onload="' . $onload . '">';
+            $fontsAdded = true;
+        }
+
+        // If no fonts were loaded, add a script tag that adds the 'fonts-loaded' class to the document.body
+        if (!$fontsAdded) {
+            $html .= '<script>document.documentElement.classList.add(\'fonts-loaded\');</script>';
+        }
+
+        // Preload the FontFiles
+        $themeFonts = $siteConfig->ThemeFonts();
+
+        $processedUrls = [];
+
+        foreach ($themeFonts as $themeFont) {
+            $fontFiles = $themeFont->FontFiles();
+            foreach ($fontFiles as $fontFile) {
+                $uploadedFiles = $fontFile->ThemeFontFiles();
+                foreach ($uploadedFiles as $uploadedFile) {
+                    // Make sure the URL is not empty
+                    if (!$uploadedFile->URL || empty($uploadedFile->URL)) continue;
+
+                    // If this URL has already been processed, skip it
+                    if (isset($processedUrls[$uploadedFile->URL])) continue;
+
+                    // Extract the type from the URL (e.g. woff2)
+                    $type = pathinfo($uploadedFile->URL, PATHINFO_EXTENSION);
+
+                    // Add the preload link
+                    $html .= '<link rel="preload" href="' . $uploadedFile->URL . '" as="font" type="font/' . $type . '" crossorigin>';
+
+                    // Mark this URL as processed
+                    $processedUrls[$uploadedFile->URL] = true;
+                }
+            }
+        }
+
+        return $html;
+    }
+
+    static function generateRequiredFiles()
     {
         // Get the current site's config
         if ($siteConfig = self::getCurrentSiteConfig()){
@@ -102,7 +164,7 @@ class Helper
                     mkdir(Director::baseFolder() . $folderPath, 0777, true);
                 }
                 $CSSFilePath = Director::baseFolder() . $folderPath;
-                $themeCSSFilePath = $CSSFilePath . $styleID . '-theme-fonts.css';
+                $themeCSSFilePath = $CSSFilePath . $styleID . '-theme-fonts.html';
                 $editorCSSFilePath = $CSSFilePath . $styleID . '-editor-fonts.css';
 
                 // Remove files if they exist
@@ -134,8 +196,12 @@ class Helper
                     }
                 }
 
+                // Get the font links and add them to the theme styles
+                $themeStyles = self::getFontLinks($siteConfig);
+
                 // Create a new file for the theme
-                $themeStyles = $CSSVars;
+                $themeStyles .= '<style>';
+                $themeStyles .= $CSSVars;
                 // Create a new file for the editor
                 $editorStyles = $CSSVars;
 
@@ -162,6 +228,9 @@ class Helper
                         $editorStyles .= '}';
                     }
                 }
+
+                // Close the file
+                $themeStyles .= '</style>';
 
                 // Write to file
                 try {

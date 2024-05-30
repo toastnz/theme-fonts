@@ -14,7 +14,7 @@ class DatabaseAdminExtension extends DataExtension
          //generate all the required css files by theme fonts
          if (Security::database_is_ready()) {
             // theme button
-            if (Helper::getCurrentSiteConfig()) Helper::generateCSSFiles();
+            if (Helper::getCurrentSiteConfig()) Helper::generateRequiredFiles();
         }
     }
 }

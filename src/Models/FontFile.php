@@ -110,7 +110,7 @@ class FontFile extends DataObject
         $this->Title = strtolower($this->Title);
         // if database and siteconfig is ready, run this
         if (Security::database_is_ready()) {
-            if ($this->ID && Helper::getCurrentSiteConfig()) Helper::generateCSSFiles();
+            if ($this->ID && Helper::getCurrentSiteConfig()) Helper::generateRequiredFiles();
         }
     }
 
@@ -123,7 +123,7 @@ class FontFile extends DataObject
     {
          // if database and siteconfig is ready, run this
          if (Security::database_is_ready()) {
-            if ($this->ID && Helper::getCurrentSiteConfig()) Helper::generateCSSFiles();
+            if ($this->ID && Helper::getCurrentSiteConfig()) Helper::generateRequiredFiles();
         }
         parent::onAfterWrite();
 

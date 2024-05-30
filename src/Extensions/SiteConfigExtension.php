@@ -22,7 +22,6 @@ class SiteConfigExtension extends DataExtension
 {
     private static $db = [
         'ThemeFontLinks' => 'Text',
-        'ThemeFontCache' => 'HTMLText',
     ];
 
     private static $many_many = [
@@ -70,83 +69,6 @@ class SiteConfigExtension extends DataExtension
             $font->requireDefaultRecords();
         }
 
-        Helper::generateCSSFiles();
-    }
-
-    // On before write, update the preload cache
-    public function onBeforeWrite()
-    {
-        parent::onBeforeWrite();
-        $this->updatePreloadCache();
-    }
-
-    public function updatePreloadCache()
-    {
-        $html = '';
-
-        // Preload the ThemeFonts
-        $fonts = $this->owner->ThemeFontLinks;
-        $fonts = preg_split('/\s+/', $fonts);
-        $lastIndex = count($fonts) - 1;
-        $fontsAdded = false;
-
-        foreach ($fonts as $index => $font) {
-            // Make sure the value is not empty
-            if (!$font || empty($font)) continue;
-
-            // Set the common onload attribute
-            $onload = 'this.onload=null;this.rel=\'stylesheet\'';
-
-            // Add the preload link
-            if ($index === $lastIndex) {
-                // For the last font, add an onload event that adds a 'fonts-loaded' class to the document.body
-                $onload .= ';document.documentElement.classList.add(\'fonts-loaded\')';
-            }
-
-            $html .= '<link rel="preload" href="' . $font . '" as="style" onload="' . $onload . '">';
-            $fontsAdded = true;
-        }
-
-        // If no fonts were loaded, add a script tag that adds the 'fonts-loaded' class to the document.body
-        if (!$fontsAdded) {
-            $html .= '<script>document.documentElement.classList.add(\'fonts-loaded\');</script>';
-        }
-
-        // Preload the FontFiles
-        $themeFonts = $this->owner->ThemeFonts();
-
-        $processedUrls = [];
-
-        foreach ($themeFonts as $themeFont) {
-            $fontFiles = $themeFont->FontFiles();
-            foreach ($fontFiles as $fontFile) {
-                $uploadedFiles = $fontFile->ThemeFontFiles();
-                foreach ($uploadedFiles as $uploadedFile) {
-                    // Make sure the URL is not empty
-                    if (!$uploadedFile->URL || empty($uploadedFile->URL)) continue;
-
-                    // If this URL has already been processed, skip it
-                    if (isset($processedUrls[$uploadedFile->URL])) continue;
-
-                    // Extract the type from the URL (e.g. woff2)
-                    $type = pathinfo($uploadedFile->URL, PATHINFO_EXTENSION);
-
-                    // Add the preload link
-                    $html .= '<link rel="preload" href="' . $uploadedFile->URL . '" as="font" type="font/' . $type . '" crossorigin>';
-
-                    // Mark this URL as processed
-                    $processedUrls[$uploadedFile->URL] = true;
-                }
-            }
-        }
-
-        // Save the HTML to the database
-        $this->owner->ThemeFontCache = $html;
-    }
-
-    public function getPreloadFonts()
-    {
-        // Return the cached HTML
-        return $this->owner->ThemeFontCache;
+        Helper::generateRequiredFiles();
     }
 }

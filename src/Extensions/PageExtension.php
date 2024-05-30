@@ -13,10 +13,9 @@ use SilverStripe\Core\Manifest\ModuleResourceLoader;
 
 class PageControllerExtension extends Extension
 {
-    // onbeforeinit
-    public function onBeforeInit()
-    {
-        $themeCssFilePath = null;
+
+    public function getThemeFonts() {
+        $fonts = null;
 
         // Grab the SiteConfig
         if($siteConfig =  Helper::getCurrentSiteConfig()){
@@ -25,17 +24,15 @@ class PageControllerExtension extends Extension
             // Get the theme ID / Name
             $theme = ($siteID == 1) ? 'mainsite' : 'subsite-' . $siteID;
             $folderPath = Config::inst()->get(SiteConfig::class, 'css_folder_path');
-            $themeCssFilePath = $folderPath . $theme . '-theme-fonts.css';
+            $fonts = $folderPath . $theme . '-theme-fonts.html';
 
-            if ($themeCssFilePath){
-                if (!file_exists(Director::baseFolder() . $themeCssFilePath)){
-                    $result = Helper::generateCSSFiles($themeCssFilePath);
+            if ($fonts){
+                if (!file_exists(Director::baseFolder() . $fonts)){
+                    $result = Helper::generateRequiredFiles($fonts);
                 }
 
-                if (file_exists(Director::baseFolder() . $themeCssFilePath)) {
-                    Requirements::customCSS(file_get_contents(Director::baseFolder() .$themeCssFilePath));
-                    // $cssFile = ModuleResourceLoader::resourceURL($themeCssFilePath);
-                    // Requirements::css($cssFile);
+                if (file_exists(Director::baseFolder() . $fonts)) {
+                    return file_get_contents(Director::baseFolder() . $fonts);
                 }
             }
         }

@@ -24,5 +24,15 @@ Toast\ThemeFonts\Models:
 
 ### Usage
 -------------
-### Colour functions 
+
+# Adding the required css and link tags to your template
+```html
+<head>
+    // Your other code
+    $ThemeFonts
+    // Your other code
+</head>
+```
+
+### Colour functions
 ```getFontFamilyClassName()``` returns `f-` + `getFontCustomID()` so the css class is unique. `f-` is there to represent `font` and to ensure the class does not start with a number.
