@@ -29,7 +29,7 @@ Toast\ThemeFonts\Models:
 ```html
 <head>
     // Your other code
-    $ThemeFonts
+    $ThemeFonts.RAW
     // Your other code
 </head>
 ```
