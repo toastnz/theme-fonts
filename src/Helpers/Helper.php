@@ -196,8 +196,10 @@ class Helper
                     }
                 }
 
+                // Add the google preconnect links
+                $themeStyles = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>';
                 // Get the font links and add them to the theme styles
-                $themeStyles = self::getFontLinks($siteConfig);
+                $themeStyles .= self::getFontLinks($siteConfig);
 
                 // Create a new file for the theme
                 $themeStyles .= '<style>';
