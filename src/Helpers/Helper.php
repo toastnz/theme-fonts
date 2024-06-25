@@ -147,6 +147,41 @@ class Helper
         return $html;
     }
 
+    static function getFontImports($siteConfig) {
+        $css = '';
+
+        // Import the ThemeFonts
+        $fonts = $siteConfig->ThemeFontLinks;
+        $fonts = preg_split('/\s+/', $fonts);
+
+        foreach ($fonts as $font) {
+            // Make sure the value is not empty
+            if (!$font || empty($font)) continue;
+
+            // Add the @import statement
+            $css .= '@import url("' . $font . '");' . PHP_EOL;
+        }
+
+        // Import the FontFiles
+        $themeFonts = $siteConfig->ThemeFonts();
+
+        foreach ($themeFonts as $themeFont) {
+            $fontFiles = $themeFont->FontFiles();
+            foreach ($fontFiles as $fontFile) {
+                $uploadedFiles = $fontFile->ThemeFontFiles();
+                foreach ($uploadedFiles as $uploadedFile) {
+                    // Make sure the URL is not empty
+                    if (!$uploadedFile->URL || empty($uploadedFile->URL)) continue;
+
+                    // Add the @import statement for the font file
+                    $css .= '@import url("' . $uploadedFile->URL . '");' . PHP_EOL;
+                }
+            }
+        }
+
+        return $css;
+    }
+
     static function generateRequiredFiles()
     {
         // Get the current site's config
@@ -198,12 +233,13 @@ class Helper
 
                 // Get the font links and add them to the theme styles
                 $themeStyles = self::getFontLinks($siteConfig);
+                $editorStyles = self::getFontImports($siteConfig);
 
                 // Create a new file for the theme
                 $themeStyles .= '<style>';
                 $themeStyles .= $CSSVars;
                 // Create a new file for the editor
-                $editorStyles = $CSSVars;
+                $editorStyles .= $CSSVars;
 
 
                 // Loop through fonts and add styles
