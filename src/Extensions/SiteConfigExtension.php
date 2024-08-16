@@ -58,7 +58,7 @@ class SiteConfigExtension extends DataExtension
                 TextareaField::create('ThemeFontPreconnects', 'Preconnects')
                     ->setDescription('Paste any extra link tags that are required, for example <code><link rel="preconnect" href="https://fonts.googleapis.com"></code>.'),
                 TextareaField::create('ThemeFontLinks', 'Font Links')
-                    ->setDescription('Paste only the href value, for example <code>https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap</code>.'),
+                    ->setDescription('Paste the link tag, for example <code><link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet"></code>.'),
                 $fontsField,
             ]);
         }

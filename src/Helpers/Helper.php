@@ -85,12 +85,25 @@ class Helper
         return $formats;
     }
 
+    static function extractHrefUrls($links) {
+        $urls = [];
+        $pattern = '/<link[^>]+href="([^"]+)"[^>]*>/i';
+
+        preg_match_all($pattern, $links, $matches);
+
+        if (!empty($matches[1])) {
+            $urls = $matches[1];
+        }
+
+        return $urls;
+    }
+
     static function getFontLinks($siteConfig) {
         $html = '';
 
         // Preload the ThemeFonts
         $fonts = $siteConfig->ThemeFontLinks;
-        $fonts = preg_split('/\s+/', $fonts);
+        $fonts = self::extractHrefUrls($fonts);
         $lastIndex = count($fonts) - 1;
         $fontsAdded = false;
 
@@ -152,7 +165,7 @@ class Helper
 
         // Import the ThemeFonts
         $fonts = $siteConfig->ThemeFontLinks;
-        $fonts = preg_split('/\s+/', $fonts);
+        $fonts = self::extractHrefUrls($fonts);
 
         foreach ($fonts as $font) {
             // Make sure the value is not empty
