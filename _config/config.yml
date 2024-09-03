@@ -2,9 +2,9 @@
 Name: toastfonts
 ---
 
-PageController:
+SilverStripe\Control\Controller:
   extensions:
-    - Toast\ThemeFonts\Extensions\PageControllerExtension
+    - Toast\ThemeFonts\Extensions\ControllerExtension
 
 Toast\ThemeFonts\Models:
   default_fonts:

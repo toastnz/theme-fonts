@@ -11,7 +11,7 @@ use Toast\ThemeFonts\Helpers\Helper;
 use SilverStripe\SiteConfig\SiteConfig;
 use SilverStripe\Core\Manifest\ModuleResourceLoader;
 
-class PageControllerExtension extends Extension
+class ControllerExtension extends Extension
 {
 
     public function getThemeFonts() {
