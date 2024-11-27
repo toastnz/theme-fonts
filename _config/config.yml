@@ -22,3 +22,12 @@ SilverStripe\SiteConfig\SiteConfig:
 SilverStripe\ORM\DatabaseAdmin:
   extensions:
     - Toast\ThemeFonts\Extensions\DatabaseAdminExtension
+
+SilverStripe\Assets\File:
+  allowed_extensions:
+    - ttf
+    - otf
+    - woff
+    - woff2
+    - eot
+    - svg
