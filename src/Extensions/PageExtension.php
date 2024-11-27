@@ -2,6 +2,7 @@
 
 namespace Toast\ThemeFonts\Extensions;
 
+use SilverStripe\ORM\DataObject;
 use SilverStripe\Core\Extension;
 use SilverStripe\Control\Director;
 use SilverStripe\ORM\DataExtension;
