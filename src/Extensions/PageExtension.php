@@ -13,12 +13,19 @@ use SilverStripe\Core\Manifest\ModuleResourceLoader;
 
 class PageControllerExtension extends Extension
 {
+    static function getCurrentSiteConfig()
+    {
+        if($siteConfig = DataObject::get_one(SiteConfig::class)){
+            return $siteConfig;
+        }
+        return;
+    }
 
     public function getThemeFonts() {
         $fonts = null;
 
         // Grab the SiteConfig
-        if($siteConfig =  Helper::getCurrentSiteConfig()){
+        if($siteConfig =  self::getCurrentSiteConfig()){
             $siteID = $siteConfig->ID;
 
             // Get the theme ID / Name
@@ -29,7 +36,7 @@ class PageControllerExtension extends Extension
 
             if ($fonts){
                 if (!file_exists($baseFolder . $fonts)){
-                    $result = Helper::generateRequiredFiles($fonts);
+                    $result = $siteConfig::generateRequiredFiles($fonts);
                 }
 
                 if (file_exists($baseFolder . $fonts)) {
