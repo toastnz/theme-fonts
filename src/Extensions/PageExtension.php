@@ -11,7 +11,7 @@ use Toast\ThemeFonts\Helpers\Helper;
 use SilverStripe\SiteConfig\SiteConfig;
 use SilverStripe\Core\Manifest\ModuleResourceLoader;
 
-class ControllerExtension extends Extension
+class PageControllerExtension extends Extension
 {
 
     public function getThemeFonts() {
@@ -24,7 +24,7 @@ class ControllerExtension extends Extension
             // Get the theme ID / Name
             $theme = ($siteID == 1) ? 'mainsite' : 'subsite-' . $siteID;
             $folderPath = Config::inst()->get(SiteConfig::class, 'css_folder_path');
-            $fonts = $folderPath . $theme . '-theme-fonts.html';
+            $fonts = $folderPath . $theme . '-site-fonts.html';
             $baseFolder = Director::baseFolder();
 
             if ($fonts){
@@ -35,9 +35,9 @@ class ControllerExtension extends Extension
                 if (file_exists($baseFolder . $fonts)) {
                     $html = '';
 
-                    // Check if the siteconfig ThemeFontPreconnects field has been set
-                    if ($siteConfig->ThemeFontPreconnects) {
-                        $html .= $siteConfig->ThemeFontPreconnects;
+                    // Check if the siteconfig SiteFontPreconnects field has been set
+                    if ($siteConfig->SiteFontPreconnects) {
+                        $html .= $siteConfig->SiteFontPreconnects;
                     }
 
                     // Add the fonts html

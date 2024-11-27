@@ -9,12 +9,21 @@ use Toast\ThemeFonts\Helpers\Helper;
 
 class DatabaseAdminExtension extends DataExtension
 {
+    static function getCurrentSiteConfig()
+    {
+        if($siteConfig = DataObject::get_one(SiteConfig::class)){
+            return $siteConfig;
+        }
+        return;
+    }
+
     public function onAfterBuild()
     {
-         //generate all the required css files by theme fonts
+        $siteConfig = self::getCurrentSiteConfig();
+
+        // Generate all the required css files by theme fonts
          if (Security::database_is_ready()) {
-            // theme button
-            if (Helper::getCurrentSiteConfig()) Helper::generateRequiredFiles();
+            $siteConfig->generateThemeFontFiles();
         }
     }
 }

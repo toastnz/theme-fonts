@@ -2,29 +2,22 @@
 Name: toastfonts
 ---
 
-SilverStripe\Control\Controller:
-  extensions:
-    - Toast\ThemeFonts\Extensions\ControllerExtension
-
-Toast\ThemeFonts\Models:
+Toast\ThemeFonts\Models\ThemeFontFamily:
   default_fonts:
     - body: null
     - headings: null
+  available_weights:
+    - 400
+    - 700
 
+PageController:
+  extensions:
+    - Toast\ThemeFonts\Extensions\PageControllerExtension
 
 SilverStripe\SiteConfig\SiteConfig:
   extensions:
     - Toast\ThemeFonts\Extensions\SiteConfigExtension
   css_folder_path: '/public/assets/styles/'
-
-SilverStripe\Assets\File:
-  allowed_extensions:
-    - ttf
-    - otf
-    - woff
-    - woff2
-    - eot
-    - svg
 
 SilverStripe\ORM\DatabaseAdmin:
   extensions:
