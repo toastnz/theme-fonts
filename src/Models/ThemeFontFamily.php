@@ -157,7 +157,7 @@ class ThemeFontFamily extends DataObject
                 // Allow multiple files to be uploaded
                 ->setAllowedMaxFileNumber(null)
                 // Set the folder to upload the files to
-                ->setFolderName('fonts')
+                ->setFolderName('Uploads/ThemeFonts')
                 // Set the allowed file types
                 ->setAllowedExtensions(['woff', 'woff2', 'ttf', 'otf', 'eot', 'svg'])
                 // Set description
