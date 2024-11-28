@@ -209,7 +209,7 @@ class SiteConfigExtension extends DataExtension
         return $fontFaceCSS;
     }
 
-    static function generateThemeFontFiles()
+    public function generateThemeFontFiles()
     {
         // Get the current site's config
         if ($siteConfig = self::getCurrentSiteConfig()) {
