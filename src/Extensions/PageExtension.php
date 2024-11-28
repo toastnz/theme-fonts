@@ -37,7 +37,7 @@ class PageControllerExtension extends Extension
 
             if ($fonts){
                 if (!file_exists($baseFolder . $fonts)){
-                    $result = $siteConfig::generateRequiredFiles($fonts);
+                    $result = $siteConfig->generateThemeFontFiles($fonts);
                 }
 
                 if (file_exists($baseFolder . $fonts)) {
