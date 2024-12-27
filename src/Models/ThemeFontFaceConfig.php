@@ -6,13 +6,17 @@ use SilverStripe\ORM\DataObject;
 use SilverStripe\SiteConfig\SiteConfig;
 use Toast\ThemeFonts\Models\ThemeFontFamily;
 
-class ThemeFontConfig extends DataObject
+class ThemeFontFaceConfig extends DataObject
 {
-    private static $table_name = 'ThemeFontConfig';
+    private static $table_name = 'ThemeFontFaceConfig';
 
     private static $db = [
-        'Title' => 'Varchar(255)',
         'SortOrder' => 'Int',
+        'FontFamily' => 'Varchar(255)',
+        'FontWeight' => 'Enum("100,200,300,400,500,600,700,800,900", "400")',
+        'FontStyle' => 'Enum("normal,italic", "normal")',
+        'FontFileID' => 'Int',
+        'FontSrc' => 'Text',
     ];
 
     private static $has_one = [
@@ -20,8 +24,8 @@ class ThemeFontConfig extends DataObject
     ];
 
     private static $summary_fields = [
-        'Title' => 'Title',
-        'ThemeFontFamily.FontFamily' => 'Font Family',
+        'FontWeight' => 'Font Weight',
+        'FontStyle' => 'Font Style',
     ];
 
     private static $default_sort = 'ID ASC';
@@ -52,20 +56,42 @@ class ThemeFontConfig extends DataObject
         return $title;
     }
 
-    static function getFontFamilyArray() {
+    static function getFontFilesArray() {
         // Get the ThemeFontFamily
         $themeFontFamily = ThemeFontFamily::get();
         // Create an empty array
         $fontFiles = [];
-
         // Loop through the ThemeFontFamily
         foreach ($themeFontFamily as $family) {
-            // Add the formatted FontFile title to the array
-            $fontFiles[$family->ID] = self::formatFontFileTitle($family->Title);
+            // Get the FontFiles
+            $files = $family->ThemeFontFiles();
+            // Loop through the FontFiles
+            foreach ($files as $file) {
+                // Add the formatted FontFile title to the array
+                $fontFiles[$file->ID] = self::formatFontFileTitle($file->Title);
+            }
         }
-
         // Return the array
         return $fontFiles;
+    }
+
+    public function getFontFaceCSS() {
+        $fontFaceCSS = '';
+
+        // Check if there is a src
+        if ($this->FontSrc) {
+            $fontFamily = explode(',', $this->FontFamily)[0];
+
+            $fontFaceCSS = '@font-face {';
+            $fontFaceCSS .= 'font-family: "' . $fontFamily . '";';
+            $fontFaceCSS .= 'font-weight: ' . $this->FontWeight . ';';
+            $fontFaceCSS .= 'font-style: ' . $this->FontStyle . ';';
+            $fontFaceCSS .= 'font-display: swap;';
+            $fontFaceCSS .= 'src: url("' . $this->FontSrc . '");';
+            $fontFaceCSS .= '}';
+        };
+
+        return $fontFaceCSS;
     }
 
     public function onBeforeWrite()

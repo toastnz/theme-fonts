@@ -5,16 +5,12 @@ namespace Toast\ThemeFonts\Models;
 use SilverStripe\ORM\DB;
 use SilverStripe\Assets\File;
 use SilverStripe\ORM\DataObject;
-use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\TextField;
-use SilverStripe\Security\Security;
-use Toast\Forms\IconOptionsetField;
-use SilverStripe\Control\Controller;
 use SilverStripe\Forms\LiteralField;
 use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\RequiredFields;
 use SilverStripe\SiteConfig\SiteConfig;
-use Toast\ThemeFonts\Models\ThemeFontConfig;
+use Toast\ThemeFonts\Models\ThemeFontFaceConfig;
 use SilverStripe\Forms\GridField\GridField;
 use SilverStripe\AssetAdmin\Forms\UploadField;
 use SilverStripe\Forms\GridField\GridFieldConfig;
@@ -39,10 +35,11 @@ class ThemeFontFamily extends DataObject
 
     private static $many_many = [
         'ThemeFontFiles' => File::class,
+        'ThemeFontConfigs' => ThemeFontConfig::class,
     ];
 
     private static $has_many = [
-        'ThemeFontConfigs' => ThemeFontConfig::class,
+        'ThemeFontFaceConfigs' => ThemeFontFaceConfig::class,
     ];
 
     private static $owns = [
@@ -65,9 +62,9 @@ class ThemeFontFamily extends DataObject
     public function getCMSFields()
     {
         $fields = parent::getCMSFields();
-        $fields->removeByName(['SortOrder','SiteConfig','CustomID', 'ThemeFontFiles', 'ThemeFontConfigs']);
+        $fields->removeByName(['SortOrder','SiteConfig','CustomID', 'ThemeFontFiles', 'ThemeFontFaceConfigs']);
 
-        $configs = $this->ThemeFontConfigs();
+        $configs = $this->ThemeFontFaceConfigs();
 
         $fontsConfig = GridFieldConfig::create();
 
@@ -83,7 +80,7 @@ class ThemeFontFamily extends DataObject
         $addNewButton->setTitle('Add Configuration');
 
         $fontsField = GridField::create(
-            'ThemeFontConfigs',
+            'ThemeFontFaceConfigs',
             'Configuration',
             $configs,
             $fontsConfig
@@ -167,6 +164,12 @@ class ThemeFontFamily extends DataObject
         // Add the configuration field once the font files have been uploaded
         if ($this->ThemeFontFiles()->count()) {
             $fields->addFieldToTab('Root.Files', $fontsField);
+        }
+
+        // If the Title === 'editmode', then we are in edit mode and we can display the CustomID field
+        if ($this->Title == 'editmode') {
+            $fields->insertAfter('Title', TextField::create('CustomID', 'Custom ID'))
+                ->setDescription('You are now in edit mode, allowing you to set a custom ID for this button. If you don\'t know what this means, please leave it blank.');
         }
 
         return $fields;
@@ -300,7 +303,7 @@ class ThemeFontFamily extends DataObject
     public function updateFontFamily()
     {
         // Get all the font items
-        $configs = $this->ThemeFontConfigs();
+        $configs = $this->ThemeFontFaceConfigs();
 
         // Loop through the font items
         foreach ($configs as $config) {

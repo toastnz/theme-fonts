@@ -2,22 +2,19 @@
 
 namespace Toast\ThemeFonts\Extensions;
 
-use SilverStripe\Assets\File;
 use SilverStripe\Forms\TabSet;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Forms\FieldList;
-use SilverStripe\Forms\TextField;
 use SilverStripe\Control\Director;
 use SilverStripe\Core\Environment;
 use SilverStripe\ORM\DataExtension;
 use SilverStripe\Security\Security;
 use SilverStripe\Core\Config\Config;
-use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\TextareaField;
 use SilverStripe\SiteConfig\SiteConfig;
-use Toast\ThemeFonts\Models\ThemeFontFamily;
 use SilverStripe\Forms\GridField\GridField;
-use SilverStripe\AssetAdmin\Forms\UploadField;
+use Toast\ThemeFonts\Models\ThemeFontConfig;
+use Toast\ThemeFonts\Models\ThemeFontFamily;
 use SilverStripe\Forms\GridField\GridFieldConfig;
 use SilverStripe\Forms\GridField\GridFieldButtonRow;
 use Symbiote\GridFieldExtensions\GridFieldTitleHeader;
@@ -37,6 +34,7 @@ class SiteConfigExtension extends DataExtension
 
     private static $many_many = [
         'ThemeFontFamilies' => ThemeFontFamily::class,
+        'ThemeFontConfigs' => ThemeFontConfig::class,
     ];
 
     public function updateCMSFields(FieldList $fields)
@@ -49,15 +47,15 @@ class SiteConfigExtension extends DataExtension
                 $fields->addFieldToTab('Root', TabSet::create('Customization'));
             }
 
-            $fontsConfig = GridFieldConfig_RecordEditor::create(50);
-            $fontsConfig->addComponent(GridFieldOrderableRows::create('SortOrder'));
-            $fontsConfig->removeComponentsByType(GridFieldDeleteAction::class);
+            $fontFamiliesConfig = GridFieldConfig_RecordEditor::create(50);
+            $fontFamiliesConfig->addComponent(GridFieldOrderableRows::create('SortOrder'));
+            $fontFamiliesConfig->removeComponentsByType(GridFieldDeleteAction::class);
 
-            $fontsField = GridField::create(
+            $fontFamiliesField = GridField::create(
                 'ThemeFontFamilies',
                 'Font Families',
                 $this->owner->ThemeFontFamilies(),
-                $fontsConfig
+                $fontFamiliesConfig
             );
 
             $fields->addFieldsToTab('Root.Customization.Fonts', [
@@ -65,8 +63,87 @@ class SiteConfigExtension extends DataExtension
                     ->setDescription('Paste any extra link tags that are required, for example <code>&lt;link rel="preconnect" href="https://fonts.googleapis.com"&gt;</code>.'),
                 TextareaField::create('ThemeFontLinks', 'Font Links')
                     ->setDescription('Paste the link tag, for example <code>&lt;link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet"&gt;</code>.'),
-                $fontsField,
+                $fontFamiliesField,
             ]);
+
+            $configs = $this->ThemeFontConfigs();
+
+            $fontsConfig = GridFieldConfig::create();
+
+            $fontsConfig
+                ->addComponent(new GridFieldButtonRow('before'))
+                ->addComponent(new GridFieldToolbarHeader())
+                ->addComponent(new GridFieldTitleHeader())
+                ->addComponent(new GridFieldEditableColumns())
+                ->addComponent(new GridFieldDeleteAction())
+                ->addComponent(GridFieldOrderableRows::create('SortOrder'))
+                ->addComponent($addNewButton = new GridFieldAddNewInlineButton());
+
+            $addNewButton->setTitle('Add Configuration');
+
+            $fontsField = GridField::create(
+                    'ThemeFontFaceConfigs',
+                    'Configuration',
+                    $configs,
+                    $fontsConfig
+                );
+
+            $fontsField->getConfig()->getComponentByType(GridFieldEditableColumns::class)
+                ->setDisplayFields([
+                    'FontFileID' => [
+                        'title' => 'This Font File',
+                        'callback' => function ($record, $column, $grid) {
+                            return DropdownField::create($column)
+                                ->setEmptyString('None')
+                                ->setSource($record::getFontFilesArray());
+                        },
+                    ],
+                    'FontWeight' => [
+                        'title' => 'Applies to font weight',
+                        'callback' => function ($record, $column, $grid) {
+                            $fontWeightTitles = [
+                                '100' => 'Extra Light',
+                                '200' => 'Light',
+                                '300' => 'Book',
+                                '400' => 'Regular',
+                                '500' => 'Medium',
+                                '600' => 'Semi Bold',
+                                '700' => 'Bold',
+                                '800' => 'Extra Bold',
+                                '900' => 'Black'
+                            ];
+
+                            // Remove any $fontWeightTitles that are not in the available weights
+                            $availableWeights = $this->getAvailableWeights();
+
+                            foreach ($fontWeightTitles as $key => $value) {
+                                if (!in_array($key, $availableWeights)) {
+                                    unset($fontWeightTitles[$key]);
+                                }
+                            }
+
+                            return DropdownField::create($column)
+                                ->setSource($fontWeightTitles);
+                        },
+                    ],
+                    'FontStyle' => [
+                        'title' => 'When font style is',
+                        'callback' => function ($record, $column, $grid) {
+                            $fontStyleTitles = [
+                                'normal' => 'Normal',
+                                'italic' => 'Italic'
+                            ];
+
+                            return DropdownField::create($column)
+                                ->setSource($fontStyleTitles);
+                        },
+                    ],
+                ]);
+
+            // Add the configuration field once the font files have been uploaded
+            if ($this->ThemeFontFamilies()->count()) {
+                $fields->addFieldToTab('Root.Files', $fontsField);
+            }
         }
     }
 
@@ -364,6 +441,8 @@ class SiteConfigExtension extends DataExtension
                 $config->write();
             }
         }
+
+        parent::onBeforeWrite();
     }
 
     public function onAfterWrite()
