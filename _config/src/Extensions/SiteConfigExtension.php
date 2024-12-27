@@ -5,11 +5,13 @@ namespace Toast\ThemeFonts\Extensions;
 use SilverStripe\Forms\TabSet;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Forms\FieldList;
+use SilverStripe\Forms\TextField;
 use SilverStripe\Control\Director;
 use SilverStripe\Core\Environment;
 use SilverStripe\ORM\DataExtension;
 use SilverStripe\Security\Security;
 use SilverStripe\Core\Config\Config;
+use SilverStripe\Forms\DropdownField;
 use SilverStripe\Forms\TextareaField;
 use SilverStripe\SiteConfig\SiteConfig;
 use SilverStripe\Forms\GridField\GridField;
@@ -39,9 +41,7 @@ class SiteConfigExtension extends DataExtension
 
     public function updateCMSFields(FieldList $fields)
     {
-        // Check if the user is a super admin
-        if (Security::database_is_ready() && self::isSuperAdmin()) {
-
+        if (Security::database_is_ready()) {
             // if Root.Customization doesn't exist, create it
             if (!$fields->fieldByName('Root.Customization')) {
                 $fields->addFieldToTab('Root', TabSet::create('Customization'));
@@ -66,7 +66,7 @@ class SiteConfigExtension extends DataExtension
                 $fontFamiliesField,
             ]);
 
-            $configs = $this->ThemeFontConfigs();
+            $configs = $this->owner->ThemeFontConfigs();
 
             $fontsConfig = GridFieldConfig::create();
 
@@ -90,59 +90,23 @@ class SiteConfigExtension extends DataExtension
 
             $fontsField->getConfig()->getComponentByType(GridFieldEditableColumns::class)
                 ->setDisplayFields([
-                    'FontFileID' => [
+                    'Title' => [
+                        'title' => 'Title',
+                        'field' => TextField::class,
+                    ],
+                    'FontFamilyID' => [
                         'title' => 'This Font File',
                         'callback' => function ($record, $column, $grid) {
                             return DropdownField::create($column)
                                 ->setEmptyString('None')
-                                ->setSource($record::getFontFilesArray());
-                        },
-                    ],
-                    'FontWeight' => [
-                        'title' => 'Applies to font weight',
-                        'callback' => function ($record, $column, $grid) {
-                            $fontWeightTitles = [
-                                '100' => 'Extra Light',
-                                '200' => 'Light',
-                                '300' => 'Book',
-                                '400' => 'Regular',
-                                '500' => 'Medium',
-                                '600' => 'Semi Bold',
-                                '700' => 'Bold',
-                                '800' => 'Extra Bold',
-                                '900' => 'Black'
-                            ];
-
-                            // Remove any $fontWeightTitles that are not in the available weights
-                            $availableWeights = $this->getAvailableWeights();
-
-                            foreach ($fontWeightTitles as $key => $value) {
-                                if (!in_array($key, $availableWeights)) {
-                                    unset($fontWeightTitles[$key]);
-                                }
-                            }
-
-                            return DropdownField::create($column)
-                                ->setSource($fontWeightTitles);
-                        },
-                    ],
-                    'FontStyle' => [
-                        'title' => 'When font style is',
-                        'callback' => function ($record, $column, $grid) {
-                            $fontStyleTitles = [
-                                'normal' => 'Normal',
-                                'italic' => 'Italic'
-                            ];
-
-                            return DropdownField::create($column)
-                                ->setSource($fontStyleTitles);
+                                ->setSource($record::getFontFamilyArray());
                         },
                     ],
                 ]);
 
             // Add the configuration field once the font files have been uploaded
-            if ($this->ThemeFontFamilies()->count()) {
-                $fields->addFieldToTab('Root.Files', $fontsField);
+            if ($this->owner->ThemeFontFamilies()->count()) {
+                $fields->addFieldToTab('Root.Customization.Fonts', $fontsField);
             }
         }
     }
@@ -153,25 +117,6 @@ class SiteConfigExtension extends DataExtension
             return $siteConfig;
         }
         return;
-    }
-
-    static function isSuperAdmin()
-    {
-         if ($defaultUser = Environment::getEnv('SS_DEFAULT_ADMIN_USERNAME')) {
-            if ($currentUser = Security::getCurrentUser()) {
-                $allowed = false;
-                // all toast email owner is a superadmin
-                if($currentUser->Email == $defaultUser || strstr($currentUser->Email, '@toast.co.nz')){
-                    $allowed = true;
-                }
-
-               // extend this method
-                $currentUser->extend('updateSuperAdmin', $allowed);
-
-                return $allowed;
-            }
-        }
-        return false;
     }
 
     static function extractHrefUrls($links) {
@@ -192,36 +137,36 @@ class SiteConfigExtension extends DataExtension
 
         // Get the current site's config
         $siteConfig = self::getCurrentSiteConfig();
-        if (!$siteConfig) {
-            return $html;
-        }
 
-        // Preload the FontFiles
-        $themeFontFamilies = $siteConfig->ThemeFontFamilies();
+        if (!$siteConfig) return $html;
+
+        $fonts = $siteConfig->ThemeFontConfigs();
+        $fontFamilies = $siteConfig->ThemeFontFamilies();
 
         // Preload the ThemeFonts
-        $fonts = self::extractHrefUrls($siteConfig->ThemeFontLinks);
+        $fontLinks = self::extractHrefUrls($siteConfig->ThemeFontLinks);
 
         $processedUrls = [];
 
         // Process theme fonts
-        foreach ($fonts as $font) {
-            if (empty($font)) {
-                continue;
-            }
+        foreach ($fontLinks as $link) {
+            if (empty($link)) continue;
 
-            $html .= '<link rel="preload" href="' . $font . '" as="style" onload="this.onload=null;this.rel=\'stylesheet\'">';
+            $html .= '<link rel="preload" href="' . $link . '" as="style" onload="this.onload=null;this.rel=\'stylesheet\'">';
         }
 
         // Process site font families
-        foreach ($themeFontFamilies as $family) {
-            foreach ($family->ThemeFontConfigs() as $config) {
-                if (empty($config->FontSrc) || isset($processedUrls[$config->FontSrc])) {
-                    continue;
-                }
+        foreach ($fonts as $config) {
+            // Get the font's font family
+            if ($family = $fontFamilies->find('ID', $config->FontFamilyID)) {
+                foreach ($family->ThemeFontFaceConfigs() as $config) {
+                    if (empty($config->FontSrc) || isset($processedUrls[$config->FontSrc])) {
+                        continue;
+                    }
 
-                $html .= '<link rel="preload" href="' . $config->FontSrc . '" as="font" type="font/' . $config->FontType . '" crossorigin>';
-                $processedUrls[$config->FontSrc] = true;
+                    $html .= '<link rel="preload" href="' . $config->FontSrc . '" as="font" type="font/' . $config->FontType . '" crossorigin>';
+                    $processedUrls[$config->FontSrc] = true;
+                }
             }
         }
 
@@ -245,17 +190,22 @@ class SiteConfigExtension extends DataExtension
         }
 
         // Import the FontFiles
-        $themeFontFamilies = $siteConfig->ThemeFontFamilies();
+        $fonts = $siteConfig->ThemeFontConfigs();
+        $fontFamilies = $siteConfig->ThemeFontFamilies();
 
-        foreach ($themeFontFamilies as $themeFontFamily) {
-            foreach ($themeFontFamily->ThemeFontConfigs() as $config) {
-                // Make sure the FontSrc is not empty
-                if (empty($config->FontSrc)) {
-                    continue;
+        // Process site font families
+        foreach ($fonts as $font) {
+            // Get the font's font family
+            if ($family = $fontFamilies->find('ID', $font->FontFamilyID)) {
+                foreach ($family->ThemeFontFaceConfigs() as $config) {
+                    // Make sure the FontSrc is not empty
+                    if (empty($config->FontSrc)) {
+                        continue;
+                    }
+
+                    // Add the @import statement for the font file
+                    $css .= '@import url("' . $config->FontSrc . '");' . PHP_EOL;
                 }
-
-                // Add the @import statement for the font file
-                $css .= '@import url("' . $config->FontSrc . '");' . PHP_EOL;
             }
         }
 
@@ -276,7 +226,7 @@ class SiteConfigExtension extends DataExtension
             // Get the font files
             $files = $fontFamily->ThemeFontFiles();
             // Get the configurations
-            $configurations = $fontFamily->ThemeFontConfigs();
+            $configurations = $fontFamily->ThemeFontFaceConfigs();
             // Loop through the configurations
             foreach ($configurations as $configuration) {
                 $fontFaceCSS .= $configuration->getFontFaceCSS();
@@ -294,10 +244,10 @@ class SiteConfigExtension extends DataExtension
             $styleID = ($siteConfig->ID == 1) ? 'mainsite' : 'subsite-' . $siteConfig->ID;
 
             // Get the site's fonts
-            $families = $siteConfig->ThemeFontFamilies();
+            $configs = $siteConfig->ThemeFontFamilies();
 
             // If we have fonts
-            if ($families->exists()) {
+            if ($configs->exists()) {
                 // Get folder path from config
                 $folderPath = Config::inst()->get(SiteConfig::class, 'css_folder_path');
 
@@ -318,7 +268,7 @@ class SiteConfigExtension extends DataExtension
                 $CSSVars = ':root {';
 
                 // Loop through fonts and add CSS vars
-                foreach ($families as $font) {
+                foreach ($configs as $font) {
                     if ($font->FontFamily) {
                         // Trim any trailing spacing from the font family
                         $family = trim($font->FontFamily);
@@ -350,9 +300,9 @@ class SiteConfigExtension extends DataExtension
                 $editorStyles .= $CSSVars;
 
                 // Loop through fonts and add styles
-                foreach ($families as $font) {
-                    if ($font->ThemeFontConfigs()->exists()) {
-                        foreach ($font->ThemeFontConfigs() as $config) {
+                foreach ($configs as $font) {
+                    if ($font->ThemeFontFaceConfigs()->exists()) {
+                        foreach ($font->ThemeFontFaceConfigs() as $config) {
                             $siteStyles .= $config->getFontFaceCSS();
                             $editorStyles .= $config->getFontFaceCSS();
                         }
@@ -428,29 +378,31 @@ class SiteConfigExtension extends DataExtension
     public function onBeforeWrite()
     {
         // Get all the font families
-        $families = $this->owner->ThemeFontFamilies();
+        $configs = $this->owner->ThemeFontFamilies();
 
         // Loop all the families
-        foreach ($families as $family) {
+        foreach ($configs as $family) {
             $family->write();
             // Get all the font item
-            $configs = $family->ThemeFontConfigs();
+            $configs = $family->ThemeFontFaceConfigs();
             // Loop all the items
             foreach ($configs as $config) {
                 // Write the item
                 $config->write();
             }
         }
-
-        parent::onBeforeWrite();
     }
 
     public function onAfterWrite()
     {
-        parent::onAfterWrite();
-        if($this->owner->ID && !$this->owner->ThemeFontFamilies()->exists()){
-            $font = new ThemeFontFamily();
-            $font->requireDefaultRecords();
+        // If we have theme font families, but dont have any theme font configs, create them
+        if ($this->owner->ID) {
+            if ($this->owner->ThemeFontFamilies()->exists()) {
+                if (!$this->owner->ThemeFontConfigs()->exists()) {
+                    $font = new ThemeFontConfig();
+                    $font->requireDefaultRecords();
+                }
+            }
         }
 
         self::generateThemeFontFiles();

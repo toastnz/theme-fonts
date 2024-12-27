@@ -35,11 +35,7 @@ class PageControllerExtension extends Extension
             $fonts = $folderPath . $theme . '-site-fonts.html';
             $baseFolder = Director::baseFolder();
 
-            if ($fonts){
-                if (!file_exists($baseFolder . $fonts)){
-                    $result = $siteConfig::generateRequiredFiles($fonts);
-                }
-
+            if ($fonts) {
                 if (file_exists($baseFolder . $fonts)) {
                     $html = '';
 
