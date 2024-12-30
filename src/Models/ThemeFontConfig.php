@@ -21,6 +21,10 @@ class ThemeFontConfig extends DataObject
         'ThemeFontFamily' => ThemeFontFamily::class,
     ];
 
+    private static $belongs_many_many = [
+        'SiteConfig' => SiteConfig::class
+    ];
+
     private static $summary_fields = [
         'Title' => 'Title',
         'ThemeFontFamily.FontFamily' => 'Font Family',
@@ -75,22 +79,20 @@ class ThemeFontConfig extends DataObject
         if ($siteConfig = self::getCurrentSiteConfig()) {
             foreach ($this->getDefaultFontFamilys() as $font) {
                 $key = key($font);
-                $value = $font[$key];
 
-                $existingRecord = $siteConfig->ThemeFontFamilies()->filter([
+                $existingRecord = $siteConfig->ThemeFontConfigs()->filter([
                     'FontConfigID' => $key,
                     'SiteConfig.ID' => $siteConfig->ID
                 ])->first();
 
                 if ($existingRecord) continue;
 
-                $font = new ThemeFontFamily();
+                $font = new ThemeFontConfig();
                 $font->Title = $key;
-                $font->CustomID = $key;
-                if ($value) $font->FontFamily = $value;
+                $font->FontConfigID = $key;
                 $font->write();
-                $siteConfig->ThemeFontFamilies()->add($font->ID);
-                DB::alteration_message("ThemeFontFamily '$key' created", 'created');
+                $siteConfig->ThemeFontConfigs()->add($font->ID);
+                DB::alteration_message("Font Config '$key' created", 'created');
             }
         }
     }

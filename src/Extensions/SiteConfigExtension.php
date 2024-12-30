@@ -95,7 +95,7 @@ class SiteConfigExtension extends DataExtension
                         'field' => TextField::class,
                     ],
                     'FontFamilyID' => [
-                        'title' => 'This Font File',
+                        'title' => 'Font Family',
                         'callback' => function ($record, $column, $grid) {
                             return DropdownField::create($column)
                                 ->setEmptyString('None')
