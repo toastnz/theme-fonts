@@ -244,103 +244,108 @@ class SiteConfigExtension extends DataExtension
 
     static function generateThemeFontFiles()
     {
-        // // Get the current site's config
-        // if ($siteConfig = self::getCurrentSiteConfig()) {
-        //     // Get the site's ID and append to the CSS file name
-        //     $styleID = ($siteConfig->ID == 1) ? 'mainsite' : 'subsite-' . $siteConfig->ID;
+        // Get the current site's config
+        if ($siteConfig = self::getCurrentSiteConfig()) {
+            // Get the site's ID and append to the CSS file name
+            $styleID = ($siteConfig->ID == 1) ? 'mainsite' : 'subsite-' . $siteConfig->ID;
 
-        //     // Get the site's fonts
-        //     $configs = $siteConfig->ThemeFontFamilies();
+            // Get the site's fonts
+            $families = $siteConfig->ThemeFontFamilies();
+            $configs = $siteConfig->ThemeFontConfigs();
 
-        //     // If we have fonts
-        //     if ($configs->exists()) {
-        //         // Get folder path from config
-        //         $folderPath = Config::inst()->get(SiteConfig::class, 'css_folder_path');
+            // If we have fonts
+            if ($families->exists()) {
+                // Get folder path from config
+                $folderPath = Config::inst()->get(SiteConfig::class, 'css_folder_path');
 
-        //         // If folder doesn't exist, create it
-        //         if (!file_exists(Director::baseFolder() . $folderPath)) {
-        //             mkdir(Director::baseFolder() . $folderPath, 0777, true);
-        //         }
+                // If folder doesn't exist, create it
+                if (!file_exists(Director::baseFolder() . $folderPath)) {
+                    mkdir(Director::baseFolder() . $folderPath, 0777, true);
+                }
 
-        //         $CSSFilePath = Director::baseFolder() . $folderPath;
-        //         $siteCSSFilePath = $CSSFilePath . $styleID . '-site-fonts.html';
-        //         $editorCSSFilePath = $CSSFilePath . $styleID . '-editor-fonts.css';
+                $CSSFilePath = Director::baseFolder() . $folderPath;
+                $siteCSSFilePath = $CSSFilePath . $styleID . '-site-fonts.html';
+                $editorCSSFilePath = $CSSFilePath . $styleID . '-editor-fonts.css';
 
-        //         // Remove files if they exist
-        //         if (file_exists($siteCSSFilePath)) unlink($siteCSSFilePath);
-        //         if (file_exists($editorCSSFilePath)) unlink($editorCSSFilePath);
+                // Remove files if they exist
+                if (file_exists($siteCSSFilePath)) unlink($siteCSSFilePath);
+                if (file_exists($editorCSSFilePath)) unlink($editorCSSFilePath);
 
-        //         // Create a new file
-        //         $CSSVars = ':root {';
+                // Create a new file
+                $CSSVars = ':root {';
 
-        //         // Loop through fonts and add CSS vars
-        //         foreach ($configs as $font) {
-        //             if ($font->FontFamily) {
-        //                 // Trim any trailing spacing from the font family
-        //                 $family = trim($font->FontFamily);
-        //                 // Remove any ; at the end of the string
-        //                 $family = rtrim($family, ';');
-        //                 // Add the CSS var
-        //                 $CSSVars .= '--' . $font->getFontFamilyClassName() . ': ' . $family . ';';
-        //             }
-        //         }
-        //         // Close the file
-        //         $CSSVars .= '}';
+                // Loop through font configs and add CSS vars
+                foreach ($configs as $config) {
+                    if ($family = $config->FontFamily) {
+                        // Trim any trailing spacing from the font family
+                        $value = trim($family);
+                        // Remove any ; at the end of the string
+                        $value = rtrim($value, ';');
 
-        //         // If the ThemeFontLinks field is empty
-        //         if (!$siteConfig->ThemeFontLinks) {
-        //             // Load the site's fonts imports to the file
-        //             if ($siteConfig->ThemeFontImports) {
-        //                 $CSSVars .= $siteConfig->ThemeFontImports;
-        //             }
-        //         }
+                        if ($value) {
+                            $id = ($config->FontConfigID) ?: $config->ID;
+                            // Add the CSS var
+                            $CSSVars .= '--font-family-' . $id . ': ' . $value . ';';
+                        }
+                    }
+                }
+                // Close the file
+                $CSSVars .= '}';
 
-        //         // Get the font links and add them to the theme styles
-        //         $siteStyles = self::getFontLinks($siteConfig);
-        //         $editorStyles = self::getFontImports($siteConfig);
+                // If the ThemeFontLinks field is empty
+                if (!$siteConfig->ThemeFontLinks) {
+                    // Load the site's fonts imports to the file
+                    if ($siteConfig->ThemeFontImports) {
+                        $CSSVars .= $siteConfig->ThemeFontImports;
+                    }
+                }
 
-        //         // Create a new file for the theme
-        //         $siteStyles .= '<style>';
-        //         $siteStyles .= $CSSVars;
-        //         // Create a new file for the editor
-        //         $editorStyles .= $CSSVars;
+                // Get the font links and add them to the theme styles
+                $siteStyles = self::getFontLinks($siteConfig);
+                $editorStyles = self::getFontImports($siteConfig);
 
-        //         // Loop through fonts and add styles
-        //         foreach ($configs as $font) {
-        //             if ($font->ThemeFontFaceConfigs()->exists()) {
-        //                 foreach ($font->ThemeFontFaceConfigs() as $config) {
-        //                     $siteStyles .= $config->getFontFaceCSS();
-        //                     $editorStyles .= $config->getFontFaceCSS();
-        //                 }
-        //             }
+                // Create a new file for the theme
+                $siteStyles .= '<style>';
+                $siteStyles .= $CSSVars;
+                // Create a new file for the editor
+                $editorStyles .= $CSSVars;
 
-        //             if ($font->FontFamily) {
-        //                 $className = $font->getFontFamilyClassName();
-        //                 // Theme styles
-        //                 $siteStyles .= '.font-family--' . $className . '{';
-        //                 $siteStyles .= 'font-family: var(--' . $className . ');';
-        //                 $siteStyles .= '}';
+                // Loop through fonts and add styles
+                foreach ($families as $family) {
+                    if ($family->ThemeFontFaceConfigs()->exists()) {
+                        foreach ($family->ThemeFontFaceConfigs() as $fontFace) {
+                            $siteStyles .= $fontFace->getFontFaceCSS();
+                            $editorStyles .= $fontFace->getFontFaceCSS();
+                        }
+                    }
 
-        //                 // Editor styles
-        //                 $editorStyles .= 'body.mce-content-body .font-family--' . $className . '{';
-        //                 $editorStyles .= 'font-family: var(--' . $className . ');';
-        //                 $editorStyles .= '}';
-        //             }
-        //         }
+                    if ($family->FontFamily) {
+                        $className = $family->ID;
+                        // Theme styles
+                        $siteStyles .= '.font-family--' . $className . '{';
+                        $siteStyles .= 'font-family: var(--' . $className . ');';
+                        $siteStyles .= '}';
 
-        //         // Close the file
-        //         $siteStyles .= '</style>';
+                        // Editor styles
+                        $editorStyles .= 'body.mce-content-body .font-family--' . $className . '{';
+                        $editorStyles .= 'font-family: var(--' . $className . ');';
+                        $editorStyles .= '}';
+                    }
+                }
 
-        //         // Write to file
-        //         try {
-        //             file_put_contents($siteCSSFilePath, $siteStyles);
-        //             file_put_contents($editorCSSFilePath, $editorStyles);
-        //         } catch (\Exception $e) {
-        //             // Handle the exception
-        //             error_log('Error writing font files: ' . $e->getMessage());
-        //         }
-        //     }
-        // }
+                // Close the file
+                $siteStyles .= '</style>';
+
+                // Write to file
+                try {
+                    file_put_contents($siteCSSFilePath, $siteStyles);
+                    file_put_contents($editorCSSFilePath, $editorStyles);
+                } catch (\Exception $e) {
+                    // Handle the exception
+                    error_log('Error writing font files: ' . $e->getMessage());
+                }
+            }
+        }
     }
 
     static function getFontFormatsForTinyMCE()
@@ -348,35 +353,35 @@ class SiteConfigExtension extends DataExtension
         $formats = [];
         $fontFormats = [];
 
-        // // Get the current site's config
-        // if ($siteConfig = self::getCurrentSiteConfig()) {
-        //     // Get the site's font families
-        //     $fontFamilies = $siteConfig->ThemeFontFamilies();
+        // Get the current site's config
+        if ($siteConfig = self::getCurrentSiteConfig()) {
+            // Get the site's font families
+            $fontFamilies = $siteConfig->ThemeFontFamilies();
 
-        //     // get current fonts
-        //     foreach ($fontFamilies as $family) {
-        //         // Make sure there is a font family before adding it to the array
-        //         if (!$family->FontFamily) continue;
-        //         // Add the font to the array
+            // get current fonts
+            foreach ($fontFamilies as $family) {
+                // Make sure there is a font family before adding it to the array
+                if (!$family->FontFamily) continue;
+                // Add the font to the array
 
-        //         // Grab the title and make it title case
-        //         $title = $family->Title;
-        //         $title = ucwords($title);
+                // Grab the title and make it title case
+                $title = $family->Title;
+                $title = ucwords($title);
 
-        //         $fontFormats[] = [
-        //             'title'          => 'Font Family / ' . $title,
-        //             'selector'       => '*',
-        //             'classes'        => 'font-family--' . $family->getFontFamilyClassName(),
-        //             'wrapper'        => true,
-        //             'merge_siblings' => true,
-        //         ];
-        //     }
+                $fontFormats[] = [
+                    'title'          => 'Font Family / ' . $title,
+                    'selector'       => '*',
+                    'classes'        => 'font-family--' . $family->ID,
+                    'wrapper'        => true,
+                    'merge_siblings' => true,
+                ];
+            }
 
-        //     $formats[] = [
-        //         'title' => 'Font Family',
-        //         'items' => $fontFormats,
-        //     ];
-        // };
+            $formats[] = [
+                'title' => 'Font Family',
+                'items' => $fontFormats,
+            ];
+        };
 
         return $formats;
     }

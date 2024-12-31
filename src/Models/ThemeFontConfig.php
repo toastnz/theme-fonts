@@ -13,6 +13,7 @@ class ThemeFontConfig extends DataObject
 
     private static $db = [
         'Title' => 'Varchar(255)',
+        'FontFamily' => 'Varchar(255)',
         'FontFamilyID' => 'Int',
         'FontConfigID' => 'Varchar(255)',
         'SortOrder' => 'Int',
@@ -73,16 +74,17 @@ class ThemeFontConfig extends DataObject
         parent::requireDefaultRecords();
 
         if ($siteConfig = self::getCurrentSiteConfig()) {
-            foreach ($this->getDefaultFontFamilys() as $font) {
-                $key = key($font);
-
+            foreach ($this->getDefaultFontFamilys() as $key) {
+                // Check if the record already exists
                 $existingRecord = $siteConfig->ThemeFontConfigs()->filter([
                     'FontConfigID' => $key,
                     'SiteConfig.ID' => $siteConfig->ID
                 ])->first();
 
+                // Skip if the record already exists
                 if ($existingRecord) continue;
 
+                // Create the new record
                 $font = new ThemeFontConfig();
                 $font->Title = $key;
                 $font->FontConfigID = $key;
@@ -127,26 +129,17 @@ class ThemeFontConfig extends DataObject
         parent::onBeforeWrite();
 
         // Get the ThemeFontFamily
-        $themeFontFamily = $this->ThemeFontFamily();
+        $themeFontFamilies = ThemeFontFamily::get();
+
+        // Get the ThemeFontFamily that matches the FontFamilyID
+        $themeFontFamily = $themeFontFamilies->find('ID', $this->FontFamilyID);
 
         if ($themeFontFamily) {
             // Set this item's FontFamily to the ThemeFontFamily FontFamily
             $this->FontFamily = $themeFontFamily->FontFamily;
-
-            // Get the FontFileID
-            $fontFileID = $this->FontFileID;
-
-            // Check if the FontFileID is set and the file exists in the ThemeFontFamily's FontFiles
-            if ($fontFileID && $fontFile = $themeFontFamily->ThemeFontFiles()->byID($fontFileID)) {
-                $this->FontSrc = $fontFile->URL;
-            } else {
-                // Optionally, handle the case where the FontFileID is not set or the file does not exist
-                $this->FontSrc = null;
-            }
         } else {
             // Optionally, handle the case where the ThemeFontFamily is not set
             $this->FontFamily = null;
-            $this->FontSrc = null;
         }
     }
 
