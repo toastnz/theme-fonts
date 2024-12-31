@@ -25,6 +25,10 @@ class ThemeFontFamily extends DataObject
 {
     private static $table_name = 'ThemeFontFamily';
 
+    private static $singular_name = 'Font Family';
+
+    private static $plural_name = 'Font Families';
+
     private static $db = [
         'SortOrder' => 'Int',
         'Title' => 'Varchar(255)',

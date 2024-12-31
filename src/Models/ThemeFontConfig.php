@@ -11,6 +11,10 @@ class ThemeFontConfig extends DataObject
 {
     private static $table_name = 'ThemeFontConfig';
 
+    private static $singular_name = 'Font Config';
+
+    private static $plural_name = 'Font Configs';
+
     private static $db = [
         'Title' => 'Varchar(255)',
         'FontFamily' => 'Varchar(255)',

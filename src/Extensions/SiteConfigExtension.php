@@ -48,8 +48,9 @@ class SiteConfigExtension extends DataExtension
             }
 
             $fontFamiliesConfig = GridFieldConfig_RecordEditor::create(50);
-            $fontFamiliesConfig->addComponent(GridFieldOrderableRows::create('SortOrder'));
-            $fontFamiliesConfig->removeComponentsByType(GridFieldDeleteAction::class);
+            $fontFamiliesConfig
+                ->addComponent(GridFieldOrderableRows::create('SortOrder'))
+                ->removeComponentsByType(GridFieldDeleteAction::class);
 
             $fontFamiliesField = GridField::create(
                 'ThemeFontFamilies',
