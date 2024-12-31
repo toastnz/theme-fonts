@@ -4,8 +4,8 @@ Name: toastfonts
 
 Toast\ThemeFonts\Models\ThemeFontFamily:
   default_fonts:
-    - body: null
-    - headings: null
+    - body
+    - headings
   available_weights:
     - 400
     - 700
