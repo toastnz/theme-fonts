@@ -349,27 +349,41 @@ class SiteConfigExtension extends DataExtension
 
         // Get the current site's config
         if ($siteConfig = self::getCurrentSiteConfig()) {
-            // Get the site's font families
-            $fontFamilies = $siteConfig->ThemeFontFamilies();
+            // Get the site's fonts
+            $families = $siteConfig->ThemeFontFamilies();
+            $configs = $siteConfig->ThemeFontConfigs();
+            $includedFamilies = [];
 
-            // get current fonts
-            foreach ($fontFamilies as $family) {
-                // Make sure there is a font family before adding it to the array
-                if (!$family->FontFamily) continue;
-                // Add the font to the array
+            if ($families->exists()) {
+                // Loop through font configs and add CSS vars
+                foreach ($configs as $config) {
+                    // Make sure there is a font family before adding it to the array
+                    if (!$family = $config->ThemeFontFamily()) continue;
 
-                // Grab the title and make it title case
-                $title = $family->Title;
-                $title = ucwords($title);
+                    // Check if the font family has already been added
+                    if (in_array($family->ID, $includedFamilies)) continue;
 
-                $fontFormats[] = [
-                    'title'          => 'Font Family / ' . $title,
-                    'selector'       => '*',
-                    'classes'        => 'font-family--' . $family->ID,
-                    'wrapper'        => true,
-                    'merge_siblings' => true,
-                ];
+                    // Add the font family to the included families array
+                    $includedFamilies[] = $family->ID;
+
+                    // Get the font config ID
+                    $id = ($config->FontConfigID) ?: $config->ID;
+
+                    // Grab the title and make it title case
+                    $title = $family->Title;
+                    $title = ucwords($title);
+
+                    $fontFormats[] = [
+                        'title'          => 'Font Family / ' . $title,
+                        'selector'       => '*',
+                        'classes'        => 'font-family--' . $id,
+                        'wrapper'        => true,
+                        'merge_siblings' => true,
+                    ];
+                }
             }
+
+            // Make the array unique
 
             $formats[] = [
                 'title' => 'Font Family',

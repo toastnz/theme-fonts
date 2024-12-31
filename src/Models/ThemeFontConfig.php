@@ -137,9 +137,11 @@ class ThemeFontConfig extends DataObject
         if ($themeFontFamily) {
             // Set this item's FontFamily to the ThemeFontFamily FontFamily
             $this->FontFamily = $themeFontFamily->FontFamily;
+            $this->ThemeFontFamilyID = $themeFontFamily->ID;
         } else {
             // Optionally, handle the case where the ThemeFontFamily is not set
             $this->FontFamily = null;
+            $this->ThemeFontFamilyID = null;
         }
     }
 
