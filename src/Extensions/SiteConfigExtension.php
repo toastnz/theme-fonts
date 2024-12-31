@@ -102,7 +102,7 @@ class SiteConfigExtension extends DataExtension
                         'title' => 'Font Family',
                         'callback' => function ($record, $column, $grid) {
                             return DropdownField::create($column)
-                                ->setEmptyString('None')
+                                ->setEmptyString('Unset')
                                 ->setSource($record::getFontFamilyArray());
                         },
                     ],
