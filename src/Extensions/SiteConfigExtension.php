@@ -82,17 +82,20 @@ class SiteConfigExtension extends DataExtension
             $addNewButton->setTitle('Add Configuration');
 
             $fontsField = GridField::create(
-                    'ThemeFontFaceConfigs',
-                    'Configuration',
-                    $configs,
-                    $fontsConfig
-                );
+                'ThemeFontFaceConfigs',
+                'Configuration',
+                $configs,
+                $fontsConfig
+            );
 
             $fontsField->getConfig()->getComponentByType(GridFieldEditableColumns::class)
                 ->setDisplayFields([
                     'Title' => [
                         'title' => 'Title',
-                        'field' => TextField::class,
+                        'callback' => function ($record, $column, $grid) {
+                            return TextField::create($column)
+                                ->setReadonly($record->isDefaultFont());
+                        },
                     ],
                     'FontFamilyID' => [
                         'title' => 'Font Family',
@@ -113,13 +116,14 @@ class SiteConfigExtension extends DataExtension
 
     static function getCurrentSiteConfig()
     {
-        if($siteConfig = DataObject::get_one(SiteConfig::class)){
+        if ($siteConfig = DataObject::get_one(SiteConfig::class)) {
             return $siteConfig;
         }
         return;
     }
 
-    static function extractHrefUrls($links) {
+    static function extractHrefUrls($links)
+    {
         $urls = [];
         $pattern = '/<link[^>]+href="([^"]+)"[^>]*>/i';
 
@@ -132,7 +136,8 @@ class SiteConfigExtension extends DataExtension
         return $urls;
     }
 
-    static function getFontLinks() {
+    static function getFontLinks()
+    {
         $html = '';
 
         // Get the current site's config
@@ -173,7 +178,8 @@ class SiteConfigExtension extends DataExtension
         return $html;
     }
 
-    static function getFontImports($siteConfig) {
+    static function getFontImports($siteConfig)
+    {
         $css = '';
 
         // Import the ThemeFonts
@@ -397,12 +403,8 @@ class SiteConfigExtension extends DataExtension
     {
         // If we have theme font families, but dont have any theme font configs, create them
         if ($this->owner->ID) {
-            if ($this->owner->ThemeFontFamilies()->exists()) {
-                if (!$this->owner->ThemeFontConfigs()->exists()) {
-                    $font = new ThemeFontConfig();
-                    $font->requireDefaultRecords();
-                }
-            }
+            $font = new ThemeFontConfig();
+            $font->requireDefaultRecords();
         }
 
         self::generateThemeFontFiles();

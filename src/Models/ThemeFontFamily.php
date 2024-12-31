@@ -2,7 +2,6 @@
 
 namespace Toast\ThemeFonts\Models;
 
-use SilverStripe\ORM\DB;
 use SilverStripe\Assets\File;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Forms\TextField;
@@ -59,7 +58,7 @@ class ThemeFontFamily extends DataObject
     public function getCMSFields()
     {
         $fields = parent::getCMSFields();
-        $fields->removeByName(['SortOrder','SiteConfig', 'ThemeFontFiles', 'ThemeFontFaceConfigs', 'ThemeFontConfigs']);
+        $fields->removeByName(['SortOrder', 'SiteConfig', 'ThemeFontFiles', 'ThemeFontFaceConfigs', 'ThemeFontConfigs']);
 
         $configs = $this->ThemeFontFaceConfigs();
 
@@ -87,7 +86,7 @@ class ThemeFontFamily extends DataObject
             ->setDisplayFields([
                 'FontFileID' => [
                     'title' => 'This Font File',
-                    'callback' => function($record, $column, $grid) {
+                    'callback' => function ($record, $column, $grid) {
                         return DropdownField::create($column)
                             ->setEmptyString('None')
                             ->setSource($record::getFontFilesArray());
@@ -95,7 +94,7 @@ class ThemeFontFamily extends DataObject
                 ],
                 'FontWeight' => [
                     'title' => 'Applies to font weight',
-                    'callback' => function($record, $column, $grid) {
+                    'callback' => function ($record, $column, $grid) {
                         $fontWeightTitles = [
                             '100' => 'Extra Light',
                             '200' => 'Light',
@@ -123,7 +122,7 @@ class ThemeFontFamily extends DataObject
                 ],
                 'FontStyle' => [
                     'title' => 'When font style is',
-                    'callback' => function($record, $column, $grid) {
+                    'callback' => function ($record, $column, $grid) {
                         $fontStyleTitles = [
                             'normal' => 'Normal',
                             'italic' => 'Italic'
@@ -165,7 +164,7 @@ class ThemeFontFamily extends DataObject
 
     static function getCurrentSiteConfig()
     {
-        if($siteConfig = DataObject::get_one(SiteConfig::class)){
+        if ($siteConfig = DataObject::get_one(SiteConfig::class)) {
             return $siteConfig;
         }
         return;
@@ -204,7 +203,7 @@ class ThemeFontFamily extends DataObject
             $config->write();
         }
 
-        if($siteConfig = self::getCurrentSiteConfig()){
+        if ($siteConfig = self::getCurrentSiteConfig()) {
             $siteConfig->generateThemeFontFiles();
         }
     }

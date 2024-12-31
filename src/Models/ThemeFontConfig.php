@@ -2,6 +2,7 @@
 
 namespace Toast\ThemeFonts\Models;
 
+use SilverStripe\ORM\DB;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\SiteConfig\SiteConfig;
 use Toast\ThemeFonts\Models\ThemeFontFamily;
@@ -35,7 +36,8 @@ class ThemeFontConfig extends DataObject
     // Method to get the default fonts
     protected function getDefaultFontFamilys()
     {
-        $fonts = $this->config()->get('default_fonts') ?: [];
+        $fontFamily = new ThemeFontFamily();
+        $fonts = $fontFamily->config()->get('default_fonts') ?: [];
         return $fonts;
     }
 
@@ -56,13 +58,7 @@ class ThemeFontConfig extends DataObject
 
     public function isDefaultFont()
     {
-        // Get the default fonts
-        $default = $this->getDefaultFontFamilys();
-
-        // Check to see if there is a key in the default array that matches the CustomID
-        if (array_key_exists($this->FontConfigID, $default)) {
-            return true;
-        }
+        if ($this->FontConfigID) return true;
 
         return false;
     }
@@ -98,7 +94,8 @@ class ThemeFontConfig extends DataObject
     }
 
     // Helper function to format titles
-    private static function formatFontFileTitle($title) {
+    private static function formatFontFileTitle($title)
+    {
         // Replace hyphens and underscores with spaces
         $title = str_replace(['-', '_'], ' ', $title);
         // Insert spaces before capital letters
@@ -108,7 +105,8 @@ class ThemeFontConfig extends DataObject
         return $title;
     }
 
-    static function getFontFamilyArray() {
+    static function getFontFamilyArray()
+    {
         // Get the ThemeFontFamily
         $themeFontFamily = ThemeFontFamily::get();
         // Create an empty array
