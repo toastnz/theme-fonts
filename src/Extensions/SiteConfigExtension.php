@@ -292,14 +292,6 @@ class SiteConfigExtension extends DataExtension
                 // Close the file
                 $CSSVars .= '}';
 
-                // If the ThemeFontLinks field is empty
-                if (!$siteConfig->ThemeFontLinks) {
-                    // Load the site's fonts imports to the file
-                    if ($siteConfig->ThemeFontImports) {
-                        $CSSVars .= $siteConfig->ThemeFontImports;
-                    }
-                }
-
                 // Get the font links and add them to the theme styles
                 $siteStyles = self::getFontLinks($siteConfig);
                 $editorStyles = self::getFontImports($siteConfig);
@@ -312,23 +304,25 @@ class SiteConfigExtension extends DataExtension
 
                 // Loop through fonts and add styles
                 foreach ($families as $family) {
-                    if ($family->ThemeFontFaceConfigs()->exists()) {
-                        foreach ($family->ThemeFontFaceConfigs() as $fontFace) {
-                            $siteStyles .= $fontFace->getFontFaceCSS();
-                            $editorStyles .= $fontFace->getFontFaceCSS();
-                        }
+                    foreach ($family->ThemeFontFaceConfigs() as $fontFace) {
+                        $siteStyles .= $fontFace->getFontFaceCSS();
+                        $editorStyles .= $fontFace->getFontFaceCSS();
                     }
+                }
 
-                    if ($family->FontFamily) {
-                        $className = $family->ID;
+                // Loop through font configs and add CSS vars
+                foreach ($configs as $config) {
+                    if ($config->FontFamily) {
+                        $id = ($config->FontConfigID) ?: $config->ID;
+
                         // Theme styles
-                        $siteStyles .= '.font-family--' . $className . '{';
-                        $siteStyles .= 'font-family: var(--' . $className . ');';
+                        $siteStyles .= '.font-family--' . $id . '{';
+                        $siteStyles .= 'font-family: var(--font-family-' . $id . ');';
                         $siteStyles .= '}';
 
                         // Editor styles
-                        $editorStyles .= 'body.mce-content-body .font-family--' . $className . '{';
-                        $editorStyles .= 'font-family: var(--' . $className . ');';
+                        $editorStyles .= 'body.mce-content-body .font-family--' . $id . '{';
+                        $editorStyles .= 'font-family: var(--font-family-' . $id . ');';
                         $editorStyles .= '}';
                     }
                 }
