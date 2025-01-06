@@ -5,12 +5,8 @@ namespace Toast\ThemeFonts\Extensions;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\Core\Extension;
 use SilverStripe\Control\Director;
-use SilverStripe\ORM\DataExtension;
-use SilverStripe\View\Requirements;
 use SilverStripe\Core\Config\Config;
-use Toast\ThemeFonts\Helpers\Helper;
 use SilverStripe\SiteConfig\SiteConfig;
-use SilverStripe\Core\Manifest\ModuleResourceLoader;
 
 class PageControllerExtension extends Extension
 {

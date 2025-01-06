@@ -3,12 +3,11 @@
 namespace Toast\ThemeFonts\Extensions;
 
 use SilverStripe\ORM\DataObject;
-use SilverStripe\Control\Director;
-use SilverStripe\ORM\DataExtension;
+use SilverStripe\Core\Extension;
 use SilverStripe\Security\Security;
 use SilverStripe\SiteConfig\SiteConfig;
 
-class DatabaseAdminExtension extends DataExtension
+class DatabaseAdminExtension extends Extension
 {
     static function getCurrentSiteConfig()
     {
