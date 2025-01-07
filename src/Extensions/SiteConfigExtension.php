@@ -8,6 +8,7 @@ use SilverStripe\ORM\DataObject;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\TextField;
 use SilverStripe\Control\Director;
+use SilverStripe\Core\Environment;
 use SilverStripe\Security\Security;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Forms\DropdownField;
@@ -38,9 +39,26 @@ class SiteConfigExtension extends Extension
         'ThemeFontConfigs' => ThemeFontConfig::class,
     ];
 
+    public function isSuperAdmin()
+    {
+        if ($defaultUser = Environment::getEnv('SS_DEFAULT_ADMIN_USERNAME')) {
+            if ($currentUser = Security::getCurrentUser()) {
+                return $currentUser->Email == $defaultUser;
+            }
+        }
+        return false;
+    }
+
     public function updateCMSFields(FieldList $fields)
     {
-        if (Security::database_is_ready()) {
+        $fields->removeByName([
+            'ThemeFontPreconnects',
+            'ThemeFontLinks',
+            'ThemeFontFamilies',
+            'ThemeFontConfigs',
+        ]);
+
+        if (Security::database_is_ready() && $this->isSuperAdmin()) {
             // if Root.Customization doesn't exist, create it
             if (!$fields->fieldByName('Root.Customization')) {
                 $fields->addFieldToTab('Root', TabSet::create('Customization'));
