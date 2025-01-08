@@ -141,7 +141,8 @@ class ThemeFontFamily extends DataObject
         $fields->addFieldsToTab('Root.Main', [
             TextField::create('Title', 'Title')
                 ->setDescription('For your reference only'),
-            TextField::create('FontFamily', 'Font Family'),
+            TextField::create('FontFamily', 'Font Family')
+                ->setDescription('Enter the font-family css value, ideally with fallback system fonts. e.g <code>"Roboto", sans-serif;</code>'),
             LiteralField::create('', '<div class="message warning">Fonts can be uploaded and configured in the Files tab.</div>'),
         ]);
 
