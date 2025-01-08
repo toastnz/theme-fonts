@@ -161,7 +161,7 @@ class ThemeFontFamily extends DataObject
 
         // Add the configuration field once the font files have been uploaded
         if ($this->ThemeFontFiles()->count()) {
-            $fields->addFieldToTab('Root.Main', $fontsField);
+            $fields->addFieldToTab('Root.Files', $fontsField);
         }
 
         return $fields;
