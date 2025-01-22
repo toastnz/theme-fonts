@@ -378,6 +378,9 @@ class SiteConfigExtension extends Extension
                     // Make sure there is a font family before adding it to the array
                     if (!$family = $config->ThemeFontFamily()) continue;
 
+                    // Check if the font has a valid ID
+                    if (!$family->ID) continue;
+
                     // Check if the font family has already been added
                     if (in_array($family->ID, $includedFamilies)) continue;
 
