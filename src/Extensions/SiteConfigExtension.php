@@ -145,6 +145,11 @@ class SiteConfigExtension extends Extension
         $urls = [];
         $pattern = '/<link[^>]+href="([^"]+)"[^>]*>/i';
 
+        // Ensure $links is a string
+        if (!is_string($links)) {
+            $links = '';
+        }
+
         preg_match_all($pattern, $links, $matches);
 
         if (!empty($matches[1])) {
