@@ -82,6 +82,9 @@ class ThemeFontFaceConfig extends DataObject
         if ($this->FontSrc) {
             $fontFamily = explode(',', $this->FontFamily)[0];
 
+            // Strip any quotes from the start and end of the font family name
+            $fontFamily = trim($fontFamily, '"\'');
+
             $fontFaceCSS = '@font-face {';
             $fontFaceCSS .= 'font-family: "' . $fontFamily . '";';
             $fontFaceCSS .= 'font-weight: ' . $this->FontWeight . ';';
