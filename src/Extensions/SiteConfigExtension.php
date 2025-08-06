@@ -78,11 +78,11 @@ class SiteConfigExtension extends Extension
 
             $fields->addFieldsToTab('Root.Customization.Fonts', [
                 TextareaField::create('ThemeFontPreconnects', 'Preconnects')
-                    ->setAttribute('data-language', 'markup')
+                    ->setAttribute('data-language', 'html')
                     ->setAttribute('spellcheck', 'false')
                     ->setDescription('Paste any extra link tags that are required, for example <code>&lt;link rel="preconnect" href="https://fonts.googleapis.com"&gt;</code>'),
                 TextareaField::create('ThemeFontLinks', 'Font Links')
-                    ->setAttribute('data-language', 'markup')
+                    ->setAttribute('data-language', 'html')
                     ->setAttribute('spellcheck', 'false')
                     ->setDescription('Paste the link tag, for example <code>&lt;link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet"&gt;</code>'),
                 $fontFamiliesField,
