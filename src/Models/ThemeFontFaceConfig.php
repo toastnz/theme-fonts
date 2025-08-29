@@ -17,6 +17,7 @@ class ThemeFontFaceConfig extends DataObject
         'FontStyle' => 'Enum("normal,italic", "normal")',
         'FontFileID' => 'Int',
         'FontSrc' => 'Text',
+        'FontType' => 'Varchar(50)',
     ];
 
     private static $has_one = [
@@ -82,6 +83,9 @@ class ThemeFontFaceConfig extends DataObject
         if ($this->FontSrc) {
             $fontFamily = explode(',', $this->FontFamily)[0];
 
+            // Strip any quotes from the start and end of the font family name
+            $fontFamily = trim($fontFamily, '"\'');
+
             $fontFaceCSS = '@font-face {';
             $fontFaceCSS .= 'font-family: "' . $fontFamily . '";';
             $fontFaceCSS .= 'font-weight: ' . $this->FontWeight . ';';
@@ -101,6 +105,10 @@ class ThemeFontFaceConfig extends DataObject
         // Get the ThemeFontFamily
         $themeFontFamily = $this->ThemeFontFamily();
 
+        $this->FontSrc = null;
+        $this->FontType = null;
+        $this->FontFamily = null;
+
         if ($themeFontFamily) {
             // Set this item's FontFamily to the ThemeFontFamily FontFamily
             $this->FontFamily = $themeFontFamily->FontFamily;
@@ -111,14 +119,8 @@ class ThemeFontFaceConfig extends DataObject
             // Check if the FontFileID is set and the file exists in the ThemeFontFamily's FontFiles
             if ($fontFileID && $fontFile = $themeFontFamily->ThemeFontFiles()->byID($fontFileID)) {
                 $this->FontSrc = $fontFile->URL;
-            } else {
-                // Optionally, handle the case where the FontFileID is not set or the file does not exist
-                $this->FontSrc = null;
+                $this->FontType = $fontFile->Extension;
             }
-        } else {
-            // Optionally, handle the case where the ThemeFontFamily is not set
-            $this->FontFamily = null;
-            $this->FontSrc = null;
         }
     }
 

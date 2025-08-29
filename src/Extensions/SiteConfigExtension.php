@@ -78,8 +78,12 @@ class SiteConfigExtension extends Extension
 
             $fields->addFieldsToTab('Root.Customization.Fonts', [
                 TextareaField::create('ThemeFontPreconnects', 'Preconnects')
+                    ->setAttribute('data-language', 'html')
+                    ->setAttribute('spellcheck', 'false')
                     ->setDescription('Paste any extra link tags that are required, for example <code>&lt;link rel="preconnect" href="https://fonts.googleapis.com"&gt;</code>'),
                 TextareaField::create('ThemeFontLinks', 'Font Links')
+                    ->setAttribute('data-language', 'html')
+                    ->setAttribute('spellcheck', 'false')
                     ->setDescription('Paste the link tag, for example <code>&lt;link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet"&gt;</code>'),
                 $fontFamiliesField,
             ]);
@@ -144,6 +148,11 @@ class SiteConfigExtension extends Extension
     {
         $urls = [];
         $pattern = '/<link[^>]+href="([^"]+)"[^>]*>/i';
+
+        // Ensure $links is a string
+        if (!is_string($links)) {
+            $links = '';
+        }
 
         preg_match_all($pattern, $links, $matches);
 
