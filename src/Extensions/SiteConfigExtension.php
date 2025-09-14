@@ -76,7 +76,7 @@ class SiteConfigExtension extends Extension
                 $fontFamiliesConfig
             );
 
-            $fields->addFieldsToTab('Root.Customization.Fonts', [
+            $fields->addFieldsToTab('Root.Customization.FontFamilies', [
                 TextareaField::create('ThemeFontPreconnects', 'Preconnects')
                     ->setAttribute('data-language', 'html')
                     ->setAttribute('spellcheck', 'false')
