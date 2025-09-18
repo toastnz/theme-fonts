@@ -131,7 +131,7 @@ class SiteConfigExtension extends Extension
 
             // Add the configuration field once the font files have been uploaded
             if ($this->owner->ThemeFontFamilies()->count()) {
-                $fields->addFieldToTab('Root.Customization.Fonts', $fontsField);
+                $fields->addFieldToTab('Root.Customization.FontFamilies', $fontsField);
             }
         }
     }
