@@ -110,30 +110,43 @@ class SiteConfigExtension extends Extension
                 $fontsConfig
             );
 
+            $displayFields = $this->getFontsDisplayFieldsForCMS();
+
             $fontsField->getConfig()->getComponentByType(GridFieldEditableColumns::class)
-                ->setDisplayFields([
-                    'Title' => [
-                        'title' => 'Title',
-                        'callback' => function ($record, $column, $grid) {
-                            return TextField::create($column)
-                                ->setReadonly($record->isDefaultFont());
-                        },
-                    ],
-                    'FontFamilyID' => [
-                        'title' => 'Font Family',
-                        'callback' => function ($record, $column, $grid) {
-                            return DropdownField::create($column)
-                                ->setEmptyString('Unset')
-                                ->setSource($record::getFontFamilyArray());
-                        },
-                    ],
-                ]);
+                ->setDisplayFields($displayFields);
 
             // Add the configuration field once the font files have been uploaded
             if ($this->owner->ThemeFontFamilies()->count()) {
                 $fields->addFieldToTab('Root.Customization.FontFamilies', $fontsField);
             }
         }
+    }
+
+    public function getFontsDisplayFieldsForCMS()
+    {
+        $fields = [
+            'Title' => [
+                'title' => 'Title',
+                'callback' => function ($record, $column, $grid) {
+                    return TextField::create($column)
+                        ->setReadonly($record->isDefaultFont());
+                },
+            ],
+            'FontFamilyID' => [
+                'title' => 'Font Family',
+                'callback' => function ($record, $column, $grid) {
+                    return DropdownField::create($column)
+                        ->setEmptyString('Unset')
+                        ->setSource($record::getFontFamilyArray());
+                },
+            ],
+        ];
+
+        // Allow this method to be extended
+        $this->owner->extend('updateFontsDisplayFieldsForCMS', $fields);
+
+        // Return the fields
+        return $fields;
     }
 
     static function getCurrentSiteConfig()
@@ -315,6 +328,12 @@ class SiteConfigExtension extends Extension
                             $CSSVars .= '--font-family-' . $id . ': ' . $value . ';';
                         }
                     }
+
+                    if ($config->BoldFontWeight) {
+                        $id = ($config->FontConfigID) ?: $config->ID;
+                        // Add the CSS var
+                        $CSSVars .= '--font-weight-' . $id . '-bold: ' . $config->BoldFontWeight . ';';
+                    }
                 }
                 // Close the file
                 $CSSVars .= '}';
@@ -345,11 +364,13 @@ class SiteConfigExtension extends Extension
                         // Theme styles
                         $siteStyles .= '.font-family--' . $id . '{';
                         $siteStyles .= 'font-family: var(--font-family-' . $id . ');';
+                        $siteStyles .= 'font-weight: var(--font-weight-' . $id . '-bold, 700);';
                         $siteStyles .= '}';
 
                         // Editor styles
                         $editorStyles .= 'body.mce-content-body .font-family--' . $id . '{';
                         $editorStyles .= 'font-family: var(--font-family-' . $id . ');';
+                        $editorStyles .= 'font-weight: var(--font-weight-' . $id . '-bold, 700);';
                         $editorStyles .= '}';
                     }
                 }

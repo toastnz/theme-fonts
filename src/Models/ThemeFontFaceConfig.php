@@ -40,14 +40,15 @@ class ThemeFontFaceConfig extends DataObject
 
     static function getCurrentSiteConfig()
     {
-        if($siteConfig = DataObject::get_one(SiteConfig::class)){
+        if ($siteConfig = DataObject::get_one(SiteConfig::class)) {
             return $siteConfig;
         }
         return;
     }
 
     // Helper function to format titles
-    private static function formatFontFileTitle($title) {
+    private static function formatFontFileTitle($title)
+    {
         // Replace hyphens and underscores with spaces
         $title = str_replace(['-', '_'], ' ', $title);
         // Insert spaces before capital letters
@@ -57,7 +58,8 @@ class ThemeFontFaceConfig extends DataObject
         return $title;
     }
 
-    static function getFontFilesArray() {
+    static function getFontFilesArray()
+    {
         // Get the ThemeFontFamily
         $themeFontFamily = ThemeFontFamily::get();
         // Create an empty array
@@ -76,7 +78,8 @@ class ThemeFontFaceConfig extends DataObject
         return $fontFiles;
     }
 
-    public function getFontFaceCSS() {
+    public function getFontFaceCSS()
+    {
         $fontFaceCSS = '';
 
         // Check if there is a src

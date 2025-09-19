@@ -20,6 +20,7 @@ class ThemeFontConfig extends DataObject
         'FontFamily' => 'Varchar(255)',
         'FontFamilyID' => 'Int',
         'FontConfigID' => 'Varchar(255)',
+        'BoldFontWeight'  => 'Varchar(64)',
         'SortOrder' => 'Int',
     ];
 
