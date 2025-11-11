@@ -363,14 +363,14 @@ class SiteConfigExtension extends Extension
 
                         // Theme styles
                         $siteStyles .= '.font-family--' . $id . '{';
+                        $siteStyles .= '--_font-weight-max: ' . $config->BoldFontWeight . ';';
                         $siteStyles .= 'font-family: var(--font-family-' . $id . ');';
-                        $siteStyles .= 'font-weight: var(--font-weight-' . $id . '-bold, 700);';
                         $siteStyles .= '}';
 
                         // Editor styles
                         $editorStyles .= 'body.mce-content-body .font-family--' . $id . '{';
+                        $siteStyles .= '--_font-weight-max: ' . $config->BoldFontWeight . ';';
                         $editorStyles .= 'font-family: var(--font-family-' . $id . ');';
-                        $editorStyles .= 'font-weight: var(--font-weight-' . $id . '-bold, 700);';
                         $editorStyles .= '}';
                     }
                 }
