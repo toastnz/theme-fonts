@@ -93,7 +93,7 @@ class ThemeFontFamily extends DataObject
                     'callback' => function ($record, $column, $grid) {
                         return DropdownField::create($column)
                             ->setEmptyString('None')
-                            ->setSource($record::getFontFilesArray());
+                            ->setSource($this->getFontFilesArray());
                     },
                 ],
                 'FontWeight' => [
@@ -165,6 +165,36 @@ class ThemeFontFamily extends DataObject
         }
 
         return $fields;
+    }
+
+    // Helper function to format titles
+    private static function formatFontFileTitle($title)
+    {
+        // Replace hyphens and underscores with spaces
+        $title = str_replace(['-', '_'], ' ', $title);
+        // Insert spaces before capital letters
+        $title = preg_replace('/([a-z])([A-Z])/', '$1 $2', $title);
+        // Capitalize the words
+        $title = ucwords($title);
+        return $title;
+    }
+
+    public function getFontFilesArray()
+    {
+        // Create an empty array
+        $fontFiles = [];
+
+        // Get the FontFiles
+        $files = $this->ThemeFontFiles();
+
+        // Loop through the FontFiles
+        foreach ($files as $file) {
+            // Add the formatted FontFile title to the array
+            $fontFiles[$file->ID] = $this->formatFontFileTitle($file->Title);
+        }
+
+        // Return the array
+        return $fontFiles;
     }
 
     static function getCurrentSiteConfig()

@@ -411,9 +411,6 @@ class SiteConfigExtension extends Extension
                     // Check if the font has a valid ID
                     if (!$family->ID) continue;
 
-                    // Check if the font family has already been added
-                    if (in_array($family->ID, $includedFamilies)) continue;
-
                     // Add the font family to the included families array
                     $includedFamilies[] = $family->ID;
 
@@ -423,6 +420,10 @@ class SiteConfigExtension extends Extension
                     // Grab the title and make it title case
                     $title = $family->Title;
                     $title = ucwords($title);
+
+                    if (in_array($family->ID, $includedFamilies)) {
+                        $title .= ' (' . ucwords($config->Title) . ')';
+                    }
 
                     $fontFormats[] = [
                         'title'          => 'Font Family / ' . $title,

@@ -46,38 +46,6 @@ class ThemeFontFaceConfig extends DataObject
         return;
     }
 
-    // Helper function to format titles
-    private static function formatFontFileTitle($title)
-    {
-        // Replace hyphens and underscores with spaces
-        $title = str_replace(['-', '_'], ' ', $title);
-        // Insert spaces before capital letters
-        $title = preg_replace('/([a-z])([A-Z])/', '$1 $2', $title);
-        // Capitalize the words
-        $title = ucwords($title);
-        return $title;
-    }
-
-    static function getFontFilesArray()
-    {
-        // Get the ThemeFontFamily
-        $themeFontFamily = ThemeFontFamily::get();
-        // Create an empty array
-        $fontFiles = [];
-        // Loop through the ThemeFontFamily
-        foreach ($themeFontFamily as $family) {
-            // Get the FontFiles
-            $files = $family->ThemeFontFiles();
-            // Loop through the FontFiles
-            foreach ($files as $file) {
-                // Add the formatted FontFile title to the array
-                $fontFiles[$file->ID] = self::formatFontFileTitle($file->Title);
-            }
-        }
-        // Return the array
-        return $fontFiles;
-    }
-
     public function getFontFaceCSS()
     {
         $fontFaceCSS = '';
