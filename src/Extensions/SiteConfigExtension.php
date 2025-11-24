@@ -369,7 +369,7 @@ class SiteConfigExtension extends Extension
 
                         // Editor styles
                         $editorStyles .= 'body.mce-content-body .font-family--' . $id . '{';
-                        $siteStyles .= '--_font-weight-max: ' . $config->BoldFontWeight . ';';
+                        $editorStyles .= '--_font-weight-max: ' . $config->BoldFontWeight . ';';
                         $editorStyles .= 'font-family: var(--font-family-' . $id . ');';
                         $editorStyles .= '}';
                     }
