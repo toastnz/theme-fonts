@@ -88,14 +88,20 @@ class ThemeFontConfig extends DataObject
 
                 // Skip if the record already exists
                 if ($existingRecord) continue;
-
+                // $key is an array entry like 'body', 'headings', 'accent'
+                // get the title from the key
+                // check if if $key is an array
+                $keyTitle = $key;
+                if(is_array($key)){
+                    $keyTitle = array_key_first($key);
+                } 
                 // Create the new record
                 $font = new ThemeFontConfig();
-                $font->Title = $key;
-                $font->FontConfigID = $key;
+                $font->Title = $keyTitle;
+                $font->FontConfigID = $keyTitle;
                 $font->write();
                 $siteConfig->ThemeFontConfigs()->add($font->ID);
-                DB::alteration_message("Font Config '$key' created", 'created');
+                DB::alteration_message("Font Config '$keyTitle' created", 'created');
             }
         }
     }
