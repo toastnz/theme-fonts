@@ -41,12 +41,15 @@ class SiteConfigExtension extends Extension
 
     public function isSuperAdmin()
     {
-        if ($defaultUser = Environment::getEnv('SS_DEFAULT_ADMIN_USERNAME')) {
-            if ($currentUser = Security::getCurrentUser()) {
-                return $currentUser->Email == $defaultUser;
+        $defaultUser = Environment::getEnv('SS_DEFAULT_ADMIN_USERNAME');
+        $currentUser = Security::getCurrentUser();
+        if(Config::inst()->get(self::class, 'bypass_super_admin_check')) {    
+            // if $currentUSer is Administrator group, they are super admin regardless of username
+            if ($currentUser && $currentUser->inGroup('administrators')) {
+                return true;
             }
         }
-        return false;
+        return $defaultUser && $currentUser && $currentUser->Email === $defaultUser;
     }
 
     public function updateCMSFields(FieldList $fields)
