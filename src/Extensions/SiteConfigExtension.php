@@ -43,7 +43,7 @@ class SiteConfigExtension extends Extension
     {
         $defaultUser = Environment::getEnv('SS_DEFAULT_ADMIN_USERNAME');
         $currentUser = Security::getCurrentUser();
-        if(Config::inst()->get(self::class, 'bypass_super_admin_check')) {    
+        if(Config::inst()->get(SiteConfig::class, 'bypass_super_admin_check')) {    
             // if $currentUSer is Administrator group, they are super admin regardless of username
             if ($currentUser && $currentUser->inGroup('administrators')) {
                 return true;
