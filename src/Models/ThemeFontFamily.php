@@ -3,257 +3,296 @@
 namespace Toast\ThemeFonts\Models;
 
 use SilverStripe\Assets\File;
-use SilverStripe\ORM\DataObject;
-use SilverStripe\Forms\TextField;
-use SilverStripe\Forms\LiteralField;
-use SilverStripe\Forms\DropdownField;
-use SilverStripe\Forms\RequiredFields;
-use SilverStripe\SiteConfig\SiteConfig;
-use Toast\ThemeFonts\Models\ThemeFontFaceConfig;
-use SilverStripe\Forms\GridField\GridField;
 use SilverStripe\AssetAdmin\Forms\UploadField;
-use SilverStripe\Forms\GridField\GridFieldConfig;
+use SilverStripe\Forms\DropdownField;
+use SilverStripe\Forms\FieldList;
+use SilverStripe\Forms\GridField\GridField;
 use SilverStripe\Forms\GridField\GridFieldButtonRow;
-use Symbiote\GridFieldExtensions\GridFieldTitleHeader;
+use SilverStripe\Forms\GridField\GridFieldConfig;
 use SilverStripe\Forms\GridField\GridFieldDeleteAction;
 use SilverStripe\Forms\GridField\GridFieldToolbarHeader;
-use Symbiote\GridFieldExtensions\GridFieldOrderableRows;
-use Symbiote\GridFieldExtensions\GridFieldEditableColumns;
+use SilverStripe\Forms\LiteralField;
+use SilverStripe\Forms\TextField;
+use SilverStripe\Forms\Validation\CompositeValidator;
+use SilverStripe\Forms\Validation\RequiredFieldsValidator;
+use SilverStripe\ORM\DataObject;
+use SilverStripe\SiteConfig\SiteConfig;
 use Symbiote\GridFieldExtensions\GridFieldAddNewInlineButton;
+use Symbiote\GridFieldExtensions\GridFieldEditableColumns;
+use Symbiote\GridFieldExtensions\GridFieldOrderableRows;
+use Symbiote\GridFieldExtensions\GridFieldTitleHeader;
 
+/**
+ * A font family (e.g. `"Roboto", sans-serif`) and the uploaded font files / @font-face configuration
+ * for it. Belongs to one or more SiteConfigs.
+ *
+ * @property int $SortOrder
+ * @property string $Title
+ * @property string $FontFamily
+ * @method \SilverStripe\ORM\ManyManyList<File> ThemeFontFiles()
+ * @method \SilverStripe\ORM\HasManyList<ThemeFontFaceConfig> ThemeFontFaceConfigs()
+ * @method \SilverStripe\ORM\HasManyList<ThemeFontConfig> ThemeFontConfigs()
+ * @method \SilverStripe\ORM\ManyManyList<SiteConfig> SiteConfig()
+ */
 class ThemeFontFamily extends DataObject
 {
-    private static $table_name = 'ThemeFontFamily';
+    private static string $table_name = 'ThemeFontFamily';
 
-    private static $singular_name = 'Font Family';
+    private static string $singular_name = 'Font Family';
 
-    private static $plural_name = 'Font Families';
+    private static string $plural_name = 'Font Families';
 
-    private static $db = [
+    /**
+     * Font configs created for every site on dev/build. Entries are strings or single key maps.
+     */
+    private static array $default_fonts = [
+        'body',
+        'headings',
+    ];
+
+    /**
+     * Weights that can be selected for an uploaded font file
+     */
+    private static array $available_weights = [
+        400,
+        700,
+    ];
+
+    /**
+     * Names for the weights, only the weights in `available_weights` are shown
+     */
+    private static array $weight_titles = [
+        '100' => 'Extra Light',
+        '200' => 'Light',
+        '300' => 'Book',
+        '400' => 'Regular',
+        '500' => 'Medium',
+        '600' => 'Semi Bold',
+        '700' => 'Bold',
+        '800' => 'Extra Bold',
+        '900' => 'Black',
+    ];
+
+    private static array $db = [
         'SortOrder' => 'Int',
         'Title' => 'Varchar(255)',
         'FontFamily' => 'Varchar(255)',
     ];
 
-    private static $many_many = [
+    private static array $many_many = [
         'ThemeFontFiles' => File::class,
-        'ThemeFontConfigs' => ThemeFontConfig::class,
     ];
 
-    private static $has_many = [
-        'ThemeFontFaceConfigs' => ThemeFontFaceConfig::class,
+    private static array $has_many = [
+        'ThemeFontFaceConfigs' => ThemeFontFaceConfig::class . '.ThemeFontFamily',
+        'ThemeFontConfigs' => ThemeFontConfig::class . '.ThemeFontFamily',
     ];
 
-    private static $owns = [
-        'ThemeFontFiles',
+    private static array $belongs_many_many = [
+        'SiteConfig' => SiteConfig::class . '.ThemeFontFamilies',
     ];
 
-    private static $belongs_many_many = [
-        'SiteConfig' => SiteConfig::class
-    ];
-
-    private static $summary_fields = [
+    private static array $summary_fields = [
         'Title' => 'Title',
         'FontFamily' => 'Font Family',
     ];
 
-    private static $default_sort = 'ID ASC';
+    private static string $default_sort = 'SortOrder ASC, ID ASC';
 
-    public function getCMSFields()
+    /**
+     * Turn a file / family title like `roboto_BoldItalic` into `Roboto Bold Italic`
+     */
+    public static function formatTitle(string $title): string
     {
-        $fields = parent::getCMSFields();
-        $fields->removeByName(['SortOrder', 'SiteConfig', 'ThemeFontFiles', 'ThemeFontFaceConfigs', 'ThemeFontConfigs']);
+        $title = str_replace(['-', '_'], ' ', $title);
+        $title = preg_replace('/([a-z])([A-Z])/', '$1 $2', $title);
 
-        $configs = $this->ThemeFontFaceConfigs();
+        return ucwords((string) $title);
+    }
 
-        $fontsConfig = GridFieldConfig::create();
+    public function getCMSFields(): FieldList
+    {
+        $this->beforeUpdateCMSFields(function (FieldList $fields): void {
+            $fields->removeByName([
+                'SortOrder',
+                'SiteConfig',
+                'ThemeFontFiles',
+                'ThemeFontFaceConfigs',
+                'ThemeFontConfigs',
+            ]);
 
-        $fontsConfig
-            ->addComponent(new GridFieldButtonRow('before'))
-            ->addComponent(new GridFieldToolbarHeader())
-            ->addComponent(new GridFieldTitleHeader())
-            ->addComponent(new GridFieldEditableColumns())
-            ->addComponent(new GridFieldDeleteAction())
+            $fields->addFieldsToTab('Root.Main', [
+                TextField::create('Title', 'Title')
+                    ->setDescription('For your reference only'),
+                TextField::create('FontFamily', 'Font Family')
+                    ->setDescription('Enter the font-family css value, ideally with fallback system fonts. e.g <code>"Roboto", sans-serif;</code>'),
+                LiteralField::create('FontFilesInfo', '<div class="alert alert-warning">Fonts can be uploaded and configured in the Files tab.</div>'),
+            ]);
+
+            $fields->addFieldsToTab('Root.Files', [
+                LiteralField::create('FontConfigurationInfo', '<div class="alert alert-warning">Configuration is needed for uploaded fonts. Save after uploading your fonts to configure them below.</div>'),
+                UploadField::create('ThemeFontFiles', 'Font Files')
+                    ->setAllowedMaxFileNumber(null)
+                    ->setFolderName('Uploads/ThemeFonts')
+                    ->setAllowedExtensions(['woff', 'woff2', 'ttf', 'otf', 'eot', 'svg'])
+                    ->setDescription('Font files are required if the font cannot be loaded through a cdn like Google or Adobe Fonts. Font files will be required for each font weight and style. e.g. If you require Roboto bold, and Roboto bold italic, you will need to upload these as 2 separate font files.'),
+            ]);
+
+            // Add the configuration field once the font files have been uploaded
+            if ($this->isInDB() && $this->ThemeFontFiles()->exists()) {
+                $fields->addFieldToTab('Root.Files', $this->getFontFaceConfigField());
+            }
+        });
+
+        return parent::getCMSFields();
+    }
+
+    public function getCMSCompositeValidator(): CompositeValidator
+    {
+        $validator = parent::getCMSCompositeValidator();
+        $validator->addValidator(RequiredFieldsValidator::create(['Title', 'FontFamily']));
+
+        return $validator;
+    }
+
+    /**
+     * The inline editor for this family's @font-face configurations
+     */
+    public function getFontFaceConfigField(): GridField
+    {
+        $config = GridFieldConfig::create()
+            ->addComponent(GridFieldButtonRow::create('before'))
+            ->addComponent(GridFieldToolbarHeader::create())
+            ->addComponent(GridFieldTitleHeader::create())
+            ->addComponent($editableColumns = GridFieldEditableColumns::create())
+            ->addComponent(GridFieldDeleteAction::create())
             ->addComponent(GridFieldOrderableRows::create('SortOrder'))
-            ->addComponent($addNewButton = new GridFieldAddNewInlineButton());
+            ->addComponent($addNewButton = GridFieldAddNewInlineButton::create());
 
         $addNewButton->setTitle('Add Configuration');
 
-        $fontsField = GridField::create(
-            'ThemeFontFaceConfigs',
-            'Configuration',
-            $configs,
-            $fontsConfig
-        );
+        $fileOptions = $this->getFontFilesArray();
+        $weightOptions = $this->getFontWeightOptions();
 
-        $fontsField->getConfig()->getComponentByType(GridFieldEditableColumns::class)
-            ->setDisplayFields([
-                'FontFileID' => [
-                    'title' => 'This Font File',
-                    'callback' => function ($record, $column, $grid) {
-                        return DropdownField::create($column)
-                            ->setEmptyString('None')
-                            ->setSource($this->getFontFilesArray());
-                    },
-                ],
-                'FontWeight' => [
-                    'title' => 'Applies to font weight',
-                    'callback' => function ($record, $column, $grid) {
-                        $fontWeightTitles = [
-                            '100' => 'Extra Light',
-                            '200' => 'Light',
-                            '300' => 'Book',
-                            '400' => 'Regular',
-                            '500' => 'Medium',
-                            '600' => 'Semi Bold',
-                            '700' => 'Bold',
-                            '800' => 'Extra Bold',
-                            '900' => 'Black'
-                        ];
+        $displayFields = [
+            'FontFileID' => [
+                'title' => 'This Font File',
+                'callback' => static function ($record, string $column) use ($fileOptions) {
+                    return DropdownField::create($column)
+                        ->setEmptyString('None')
+                        ->setSource($fileOptions);
+                },
+            ],
+            'FontWeight' => [
+                'title' => 'Applies to font weight',
+                'callback' => static function ($record, string $column) use ($weightOptions) {
+                    return DropdownField::create($column)->setSource($weightOptions);
+                },
+            ],
+            'FontStyle' => [
+                'title' => 'When font style is',
+                'callback' => static function ($record, string $column) {
+                    return DropdownField::create($column)->setSource([
+                        'normal' => 'Normal',
+                        'italic' => 'Italic',
+                    ]);
+                },
+            ],
+        ];
 
-                        // Remove any $fontWeightTitles that are not in the available weights
-                        $availableWeights = $this->getAvailableWeights();
+        $this->extend('updateFontFaceDisplayFields', $displayFields);
+        $editableColumns->setDisplayFields($displayFields);
 
-                        foreach ($fontWeightTitles as $key => $value) {
-                            if (!in_array($key, $availableWeights)) {
-                                unset($fontWeightTitles[$key]);
-                            }
-                        }
-
-                        return DropdownField::create($column)
-                            ->setSource($fontWeightTitles);
-                    },
-                ],
-                'FontStyle' => [
-                    'title' => 'When font style is',
-                    'callback' => function ($record, $column, $grid) {
-                        $fontStyleTitles = [
-                            'normal' => 'Normal',
-                            'italic' => 'Italic'
-                        ];
-
-                        return DropdownField::create($column)
-                            ->setSource($fontStyleTitles);
-                    },
-                ],
-            ]);
-
-        $fields->addFieldsToTab('Root.Main', [
-            TextField::create('Title', 'Title')
-                ->setDescription('For your reference only'),
-            TextField::create('FontFamily', 'Font Family')
-                ->setDescription('Enter the font-family css value, ideally with fallback system fonts. e.g <code>"Roboto", sans-serif;</code>'),
-            LiteralField::create('', '<div class="message warning">Fonts can be uploaded and configured in the Files tab.</div>'),
-        ]);
-
-        $fields->addFieldsToTab('Root.Files', [
-            LiteralField::create('', '<div class="message warning">Configuration is needed for uploaded fonts. Save after uploading your fonts to configure them below.</div>'),
-            UploadField::create('ThemeFontFiles', 'Font Files')
-                // Allow multiple files to be uploaded
-                ->setAllowedMaxFileNumber(null)
-                // Set the folder to upload the files to
-                ->setFolderName('Uploads/ThemeFonts')
-                // Set the allowed file types
-                ->setAllowedExtensions(['woff', 'woff2', 'ttf', 'otf', 'eot', 'svg'])
-                // Set description
-                ->setDescription('Font files are required if the font cannot be loaded through a cdn like Google or Adobe Fonts. Font files will be required for each font weight and style. e.g. If you require Roboto bold, and Roboto bold italic, you will need to upload these as 2 separate font files.'),
-        ]);
-
-        // Add the configuration field once the font files have been uploaded
-        if ($this->ThemeFontFiles()->count()) {
-            $fields->addFieldToTab('Root.Files', $fontsField);
-        }
-
-        return $fields;
+        return GridField::create('ThemeFontFaceConfigs', 'Configuration', $this->ThemeFontFaceConfigs(), $config);
     }
 
-    // Helper function to format titles
-    private static function formatFontFileTitle($title)
+    /**
+     * ID => title options of the uploaded font files
+     *
+     * @return array<int, string>
+     */
+    public function getFontFilesArray(): array
     {
-        // Replace hyphens and underscores with spaces
-        $title = str_replace(['-', '_'], ' ', $title);
-        // Insert spaces before capital letters
-        $title = preg_replace('/([a-z])([A-Z])/', '$1 $2', $title);
-        // Capitalize the words
-        $title = ucwords($title);
-        return $title;
-    }
-
-    public function getFontFilesArray()
-    {
-        // Create an empty array
         $fontFiles = [];
 
-        // Get the FontFiles
-        $files = $this->ThemeFontFiles();
-
-        // Loop through the FontFiles
-        foreach ($files as $file) {
-            // Add the formatted FontFile title to the array
-            $fontFiles[$file->ID] = $this->formatFontFileTitle($file->Title);
+        foreach ($this->ThemeFontFiles() as $file) {
+            $fontFiles[$file->ID] = static::formatTitle((string) $file->Title);
         }
 
-        // Return the array
+        $this->extend('updateFontFilesArray', $fontFiles);
+
         return $fontFiles;
     }
 
-    static function getCurrentSiteConfig()
+    /**
+     * Weight => title options limited to the `available_weights` config
+     *
+     * @return array<string, string>
+     */
+    public function getFontWeightOptions(): array
     {
-        if ($siteConfig = DataObject::get_one(SiteConfig::class)) {
-            return $siteConfig;
-        }
-        return;
+        $available = array_map('strval', $this->getAvailableWeights());
+        $options = array_intersect_key($this->config()->get('weight_titles') ?: [], array_flip($available));
+
+        $this->extend('updateFontWeightOptions', $options);
+
+        return $options;
     }
 
-    public function getCMSValidator()
-    {
-        $required = new RequiredFields(['Title', 'FontFamily']);
-
-        $this->extend('updateCMSValidator', $required);
-
-        return $required;
-    }
-
-    // Method to get the default fonts
-    protected function getDefaultFontFamilys()
-    {
-        $fonts = $this->config()->get('default_fonts') ?: [];
-        return $fonts;
-    }
-
-    // Method to get available font weights
-    protected function getAvailableWeights()
+    /**
+     * @return array<int|string>
+     */
+    public function getAvailableWeights(): array
     {
         $weights = $this->config()->get('available_weights') ?: [];
+
+        $this->extend('updateAvailableWeights', $weights);
+
         return $weights;
     }
 
-    public function updateFontFamily()
+    /**
+     * Publish the uploaded font files. Files are draft after upload and draft files are only
+     * served to logged in CMS users, so fonts would never load for visitors.
+     */
+    public function publishFontFiles(): void
     {
-        // Get all the font items
-        $configs = $this->ThemeFontFaceConfigs();
-
-        // Loop through the font items
-        foreach ($configs as $config) {
-            $config->write();
+        foreach ($this->ThemeFontFiles() as $file) {
+            if (!$file->isPublished()) {
+                $file->publishSingle();
+            }
         }
 
-        if ($siteConfig = self::getCurrentSiteConfig()) {
-            $siteConfig->generateThemeFontFiles();
-        }
+        $this->extend('onAfterPublishFontFiles');
     }
 
-    public function onAfterWrite()
+    /**
+     * Rebuild the generated font files of each site using this family
+     */
+    public function updateFontFamily(): void
+    {
+        $this->publishFontFiles();
+
+        foreach ($this->SiteConfig() as $siteConfig) {
+            $siteConfig->generateThemeFontFiles();
+        }
+
+        $this->extend('onAfterUpdateFontFamily');
+    }
+
+    protected function onAfterWrite(): void
     {
         parent::onAfterWrite();
 
-        // Update the font items
         $this->updateFontFamily();
     }
 
-    public function onAfterSkippedWrite()
+    /**
+     * Writes where nothing on the family changed (e.g. only the inline face configurations were
+     * saved) don't call onAfterWrite
+     */
+    protected function onAfterSkippedWrite(): void
     {
-        // Update the font items
         $this->updateFontFamily();
     }
 }

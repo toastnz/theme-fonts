@@ -2,58 +2,124 @@
 
 namespace Toast\ThemeFonts\Extensions;
 
-use SilverStripe\Forms\TabSet;
-use SilverStripe\Core\Extension;
-use SilverStripe\ORM\DataObject;
-use SilverStripe\Forms\FieldList;
-use SilverStripe\Forms\TextField;
+use Psr\Log\LoggerInterface;
+use SilverStripe\Assets\Filesystem;
 use SilverStripe\Control\Director;
-use SilverStripe\Core\Environment;
-use SilverStripe\Security\Security;
-use SilverStripe\Core\Config\Config;
+use SilverStripe\Core\ClassInfo;
+use SilverStripe\Core\Convert;
+use SilverStripe\Core\Extension;
+use SilverStripe\Core\Injector\Injector;
+use SilverStripe\Core\Path;
 use SilverStripe\Forms\DropdownField;
-use SilverStripe\Forms\TextareaField;
-use SilverStripe\SiteConfig\SiteConfig;
+use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\GridField\GridField;
-use Toast\ThemeFonts\Models\ThemeFontConfig;
-use Toast\ThemeFonts\Models\ThemeFontFamily;
-use SilverStripe\Forms\GridField\GridFieldConfig;
 use SilverStripe\Forms\GridField\GridFieldButtonRow;
-use Symbiote\GridFieldExtensions\GridFieldTitleHeader;
+use SilverStripe\Forms\GridField\GridFieldConfig;
+use SilverStripe\Forms\GridField\GridFieldConfig_RecordEditor;
 use SilverStripe\Forms\GridField\GridFieldDeleteAction;
 use SilverStripe\Forms\GridField\GridFieldToolbarHeader;
-use Symbiote\GridFieldExtensions\GridFieldOrderableRows;
-use Symbiote\GridFieldExtensions\GridFieldEditableColumns;
+use SilverStripe\Forms\TabSet;
+use SilverStripe\Forms\TextareaField;
+use SilverStripe\Forms\TextField;
+use SilverStripe\ORM\DB;
+use SilverStripe\Security\DefaultAdminService;
+use SilverStripe\Security\Member;
+use SilverStripe\Security\Permission;
+use SilverStripe\Security\Security;
+use SilverStripe\SiteConfig\SiteConfig;
 use Symbiote\GridFieldExtensions\GridFieldAddNewInlineButton;
-use SilverStripe\Forms\GridField\GridFieldConfig_RecordEditor;
+use Symbiote\GridFieldExtensions\GridFieldEditableColumns;
+use Symbiote\GridFieldExtensions\GridFieldOrderableRows;
+use Symbiote\GridFieldExtensions\GridFieldTitleHeader;
+use Toast\ThemeFonts\Models\ThemeFontConfig;
+use Toast\ThemeFonts\Models\ThemeFontFamily;
 
+/**
+ * Adds theme font management to SiteConfig. Every SiteConfig (including one per subsite when
+ * silverstripe/subsites is installed) has its own font families, configs and generated files.
+ *
+ * @property string $ThemeFontPreconnects
+ * @property string $ThemeFontLinks
+ * @method \SilverStripe\ORM\ManyManyList<ThemeFontFamily> ThemeFontFamilies()
+ * @method \SilverStripe\ORM\ManyManyList<ThemeFontConfig> ThemeFontConfigs()
+ *
+ * @extends Extension<SiteConfig&static>
+ */
 class SiteConfigExtension extends Extension
 {
-    private static $db = [
+    /**
+     * Folder (relative to the base folder) the generated font files are written to
+     */
+    private static string $css_folder_path = '/public/assets/styles/';
+
+    /**
+     * When true any member with the ADMIN permission can manage theme fonts, otherwise only the
+     * default admin (SS_DEFAULT_ADMIN_USERNAME) can
+     */
+    private static bool $bypass_super_admin_check = false;
+
+    private static array $db = [
         'ThemeFontPreconnects' => 'Text',
         'ThemeFontLinks' => 'Text',
     ];
 
-    private static $many_many = [
+    private static array $many_many = [
         'ThemeFontFamilies' => ThemeFontFamily::class,
         'ThemeFontConfigs' => ThemeFontConfig::class,
     ];
 
-    public function isSuperAdmin()
+    /**
+     * Every SiteConfig, regardless of the current subsite. Use this in tasks / builds where there
+     * is no current subsite.
+     *
+     * @return SiteConfig[]
+     */
+    public static function getAllSiteConfigs(): array
     {
-        $defaultUser = Environment::getEnv('SS_DEFAULT_ADMIN_USERNAME');
-        $currentUser = Security::getCurrentUser();
-        if(Config::inst()->get(SiteConfig::class, 'bypass_super_admin_check')) {    
-            // if $currentUSer is Administrator group, they are super admin regardless of username
-            if ($currentUser && $currentUser->inGroup('administrators')) {
-                return true;
-            }
+        $fetch = static fn (): array => SiteConfig::get()->toArray();
+
+        $subsiteClass = 'SilverStripe\\Subsites\\Model\\Subsite';
+        if (ClassInfo::exists($subsiteClass)) {
+            return $subsiteClass::withDisabledSubsiteFilter($fetch);
         }
-        return $defaultUser && $currentUser && $currentUser->Email === $defaultUser;
+
+        return $fetch();
     }
 
-    public function updateCMSFields(FieldList $fields)
+    /**
+     * TinyMCE `style_formats` entry listing this site's font configs. Static so it can be used
+     * directly in HTMLEditorConfig setup, see getThemeFontFormats() for the extendable version.
+     */
+    public static function getFontFormatsForTinyMCE(): array
     {
+        return SiteConfig::current_site_config()->getThemeFontFormats();
+    }
+
+    public function isSuperAdmin(?Member $member = null): bool
+    {
+        $member ??= Security::getCurrentUser();
+        $isSuperAdmin = false;
+
+        if ($member) {
+            // Any administrator is a super admin when the bypass is enabled
+            if ($this->getOwner()->config()->get('bypass_super_admin_check')) {
+                $isSuperAdmin = Permission::checkMember($member, 'ADMIN');
+            }
+
+            if (!$isSuperAdmin) {
+                $isSuperAdmin = DefaultAdminService::isDefaultAdmin($member->Email);
+            }
+        }
+
+        $this->getOwner()->extend('updateIsSuperAdmin', $isSuperAdmin, $member);
+
+        return (bool) $isSuperAdmin;
+    }
+
+    protected function updateCMSFields(FieldList $fields): void
+    {
+        $owner = $this->getOwner();
+
         $fields->removeByName([
             'ThemeFontPreconnects',
             'ThemeFontLinks',
@@ -61,420 +127,427 @@ class SiteConfigExtension extends Extension
             'ThemeFontConfigs',
         ]);
 
-        if (Security::database_is_ready() && $this->isSuperAdmin()) {
-            // if Root.Customization doesn't exist, create it
-            if (!$fields->fieldByName('Root.Customization')) {
-                $fields->addFieldToTab('Root', TabSet::create('Customization'));
-            }
+        if (!$owner->isSuperAdmin()) {
+            return;
+        }
 
-            $fontFamiliesConfig = GridFieldConfig_RecordEditor::create(50);
-            $fontFamiliesConfig
-                ->addComponent(GridFieldOrderableRows::create('SortOrder'))
-                ->removeComponentsByType(GridFieldDeleteAction::class);
+        if (!$fields->fieldByName('Root.Customization')) {
+            $fields->addFieldToTab('Root', TabSet::create('Customization'));
+        }
 
-            $fontFamiliesField = GridField::create(
+        $fontFamiliesConfig = GridFieldConfig_RecordEditor::create(50);
+        $fontFamiliesConfig
+            ->addComponent(GridFieldOrderableRows::create('SortOrder'))
+            ->removeComponentsByType(GridFieldDeleteAction::class);
+
+        $fields->addFieldsToTab('Root.Customization.FontFamilies', [
+            TextareaField::create('ThemeFontPreconnects', 'Preconnects')
+                ->setAttribute('data-language', 'html')
+                ->setAttribute('spellcheck', 'false')
+                ->setDescription('Paste any extra link tags that are required, for example <code>&lt;link rel="preconnect" href="https://fonts.googleapis.com"&gt;</code>'),
+            TextareaField::create('ThemeFontLinks', 'Font Links')
+                ->setAttribute('data-language', 'html')
+                ->setAttribute('spellcheck', 'false')
+                ->setDescription('Paste the link tag, for example <code>&lt;link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet"&gt;</code>'),
+            GridField::create(
                 'ThemeFontFamilies',
                 'Font Families',
-                $this->owner->ThemeFontFamilies(),
+                $owner->ThemeFontFamilies(),
                 $fontFamiliesConfig
-            );
+            ),
+        ]);
 
-            $fields->addFieldsToTab('Root.Customization.FontFamilies', [
-                TextareaField::create('ThemeFontPreconnects', 'Preconnects')
-                    ->setAttribute('data-language', 'html')
-                    ->setAttribute('spellcheck', 'false')
-                    ->setDescription('Paste any extra link tags that are required, for example <code>&lt;link rel="preconnect" href="https://fonts.googleapis.com"&gt;</code>'),
-                TextareaField::create('ThemeFontLinks', 'Font Links')
-                    ->setAttribute('data-language', 'html')
-                    ->setAttribute('spellcheck', 'false')
-                    ->setDescription('Paste the link tag, for example <code>&lt;link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet"&gt;</code>'),
-                $fontFamiliesField,
-            ]);
-
-            $configs = $this->owner->ThemeFontConfigs();
-
-            $fontsConfig = GridFieldConfig::create();
-
-            $fontsConfig
-                ->addComponent(new GridFieldButtonRow('before'))
-                ->addComponent(new GridFieldToolbarHeader())
-                ->addComponent(new GridFieldTitleHeader())
-                ->addComponent(new GridFieldEditableColumns())
-                ->addComponent(new GridFieldDeleteAction())
+        // Add the configuration field once a font family has been created
+        if ($owner->ThemeFontFamilies()->exists()) {
+            $fontsConfig = GridFieldConfig::create()
+                ->addComponent(GridFieldButtonRow::create('before'))
+                ->addComponent(GridFieldToolbarHeader::create())
+                ->addComponent(GridFieldTitleHeader::create())
+                ->addComponent($editableColumns = GridFieldEditableColumns::create())
+                ->addComponent(GridFieldDeleteAction::create())
                 ->addComponent(GridFieldOrderableRows::create('SortOrder'))
-                ->addComponent($addNewButton = new GridFieldAddNewInlineButton());
+                ->addComponent($addNewButton = GridFieldAddNewInlineButton::create());
 
             $addNewButton->setTitle('Add Configuration');
+            $editableColumns->setDisplayFields($owner->getFontsDisplayFieldsForCMS());
 
-            $fontsField = GridField::create(
-                'ThemeFontFaceConfigs',
-                'Configuration',
-                $configs,
-                $fontsConfig
+            $fields->addFieldToTab(
+                'Root.Customization.FontFamilies',
+                GridField::create('ThemeFontConfigs', 'Configuration', $owner->ThemeFontConfigs(), $fontsConfig)
             );
-
-            $displayFields = $this->getFontsDisplayFieldsForCMS();
-
-            $fontsField->getConfig()->getComponentByType(GridFieldEditableColumns::class)
-                ->setDisplayFields($displayFields);
-
-            // Add the configuration field once the font files have been uploaded
-            if ($this->owner->ThemeFontFamilies()->count()) {
-                $fields->addFieldToTab('Root.Customization.FontFamilies', $fontsField);
-            }
         }
     }
 
-    public function getFontsDisplayFieldsForCMS()
+    /**
+     * Columns of the font config editor, extend with `updateFontsDisplayFieldsForCMS`
+     */
+    public function getFontsDisplayFieldsForCMS(): array
     {
+        $owner = $this->getOwner();
+        $familyOptions = ThemeFontConfig::getFontFamilyArray($owner);
+
         $fields = [
             'Title' => [
                 'title' => 'Title',
-                'callback' => function ($record, $column, $grid) {
+                'callback' => static function (ThemeFontConfig $record, string $column) {
                     return TextField::create($column)
                         ->setReadonly($record->isDefaultFont());
                 },
             ],
-            'FontFamilyID' => [
+            'ThemeFontFamilyID' => [
                 'title' => 'Font Family',
-                'callback' => function ($record, $column, $grid) {
+                'callback' => static function (ThemeFontConfig $record, string $column) use ($familyOptions) {
                     return DropdownField::create($column)
                         ->setEmptyString('Unset')
-                        ->setSource($record::getFontFamilyArray());
+                        ->setSource($familyOptions);
                 },
             ],
         ];
 
-        // Allow this method to be extended
-        $this->owner->extend('updateFontsDisplayFieldsForCMS', $fields);
+        $owner->extend('updateFontsDisplayFieldsForCMS', $fields);
 
-        // Return the fields
         return $fields;
     }
 
-    static function getCurrentSiteConfig()
+    /**
+     * Key used in the generated file names, e.g. `mainsite` or `subsite-3`
+     */
+    public function getThemeFontsFileKey(): string
     {
-        if ($siteConfig = DataObject::get_one(SiteConfig::class)) {
-            return $siteConfig;
-        }
-        return;
+        $owner = $this->getOwner();
+        $key = ((int) $owner->ID === 1) ? 'mainsite' : 'subsite-' . $owner->ID;
+
+        $owner->extend('updateThemeFontsFileKey', $key);
+
+        return $key;
     }
 
-    static function extractHrefUrls($links)
+    /**
+     * Absolute path of the folder the generated files are written to
+     */
+    public function getThemeFontsFolderPath(): string
+    {
+        $folder = (string) $this->getOwner()->config()->get('css_folder_path');
+        $path = Path::join(Director::baseFolder(), $folder);
+
+        $this->getOwner()->extend('updateThemeFontsFolderPath', $path);
+
+        return $path;
+    }
+
+    /**
+     * Absolute path of the generated html (preload links + inline styles) rendered by `$ThemeFonts`
+     */
+    public function getThemeFontsSiteFilePath(): string
+    {
+        return Path::join($this->getThemeFontsFolderPath(), $this->getThemeFontsFileKey() . '-site-fonts.html');
+    }
+
+    /**
+     * Absolute path of the generated stylesheet intended for the HTML editor
+     */
+    public function getThemeFontsEditorFilePath(): string
+    {
+        return Path::join($this->getThemeFontsFolderPath(), $this->getThemeFontsFileKey() . '-editor-fonts.css');
+    }
+
+    /**
+     * Extract the href of every `<link>` tag in the given html
+     *
+     * @return string[]
+     */
+    public function extractHrefUrls(?string $links): array
     {
         $urls = [];
-        $pattern = '/<link[^>]+href="([^"]+)"[^>]*>/i';
 
-        // Ensure $links is a string
-        if (!is_string($links)) {
-            $links = '';
+        if ($links && preg_match_all('/<link[^>]+href="([^"]+)"[^>]*>/i', $links, $matches)) {
+            // The hrefs are html attribute values, decode them so they can be re-escaped for html or css
+            $urls = array_values(array_filter(array_map(
+                static fn (string $url): string => html_entity_decode($url, ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+                $matches[1]
+            )));
         }
 
-        preg_match_all($pattern, $links, $matches);
-
-        if (!empty($matches[1])) {
-            $urls = $matches[1];
-        }
+        $this->getOwner()->extend('updateExtractedHrefUrls', $urls, $links);
 
         return $urls;
     }
 
-    static function getFontLinks()
+    /**
+     * Preload tags for the font links and font files used by this site's font configs
+     */
+    public function getFontLinks(): string
     {
+        $owner = $this->getOwner();
         $html = '';
 
-        // Get the current site's config
-        $siteConfig = self::getCurrentSiteConfig();
-
-        if (!$siteConfig) return $html;
-
-        $fonts = $siteConfig->ThemeFontConfigs();
-        $fontFamilies = $siteConfig->ThemeFontFamilies();
-
-        // Preload the ThemeFonts
-        $fontLinks = self::extractHrefUrls($siteConfig->ThemeFontLinks);
+        foreach ($this->extractHrefUrls($owner->ThemeFontLinks) as $link) {
+            $html .= '<link rel="preload" href="' . Convert::raw2att($link) . '" as="style" onload="this.onload=null;this.rel=\'stylesheet\'">';
+        }
 
         $processedUrls = [];
-
-        // Process theme fonts
-        foreach ($fontLinks as $link) {
-            if (empty($link)) continue;
-
-            $html .= '<link rel="preload" href="' . $link . '" as="style" onload="this.onload=null;this.rel=\'stylesheet\'">';
-        }
-
-        // Process site font families
-        foreach ($fonts as $config) {
-            // Get the font's font family
-            if ($family = $fontFamilies->find('ID', $config->FontFamilyID)) {
-                foreach ($family->ThemeFontFaceConfigs() as $config) {
-                    if (empty($config->FontSrc) || isset($processedUrls[$config->FontSrc])) {
-                        continue;
-                    }
-
-                    $html .= '<link rel="preload" href="' . $config->FontSrc . '" as="font" type="font/' . $config->FontType . '" crossorigin>';
-                    $processedUrls[$config->FontSrc] = true;
+        foreach ($this->getUsedFontFamilies() as $family) {
+            foreach ($family->ThemeFontFaceConfigs() as $faceConfig) {
+                $src = $faceConfig->getFontSrc();
+                if (!$src || isset($processedUrls[$src])) {
+                    continue;
                 }
+
+                $html .= '<link rel="preload" href="' . Convert::raw2att($src) . '" as="font" type="' . Convert::raw2att($faceConfig->getFontMimeType()) . '" crossorigin>';
+                $processedUrls[$src] = true;
             }
         }
+
+        $owner->extend('updateFontLinks', $html);
 
         return $html;
     }
 
-    static function getFontImports($siteConfig)
+    /**
+     * `@import` statements for the editor stylesheet
+     */
+    public function getFontImports(): string
     {
+        $owner = $this->getOwner();
         $css = '';
 
-        // Import the ThemeFonts
-        $fonts = self::extractHrefUrls($siteConfig->ThemeFontLinks);
-
-        foreach ($fonts as $font) {
-            // Make sure the value is not empty
-            if (empty($font)) {
-                continue;
-            }
-
-            // Add the @import statement
-            $css .= '@import url("' . $font . '");' . PHP_EOL;
+        foreach ($this->extractHrefUrls($owner->ThemeFontLinks) as $url) {
+            $css .= '@import url("' . $this->escapeCSSString($url) . '");' . PHP_EOL;
         }
 
-        // Import the FontFiles
-        $fonts = $siteConfig->ThemeFontConfigs();
-        $fontFamilies = $siteConfig->ThemeFontFamilies();
-
-        // Process site font families
-        foreach ($fonts as $font) {
-            // Get the font's font family
-            if ($family = $fontFamilies->find('ID', $font->FontFamilyID)) {
-                foreach ($family->ThemeFontFaceConfigs() as $config) {
-                    // Make sure the FontSrc is not empty
-                    if (empty($config->FontSrc)) {
-                        continue;
-                    }
-
-                    // Add the @import statement for the font file
-                    $css .= '@import url("' . $config->FontSrc . '");' . PHP_EOL;
+        foreach ($this->getUsedFontFamilies() as $family) {
+            foreach ($family->ThemeFontFaceConfigs() as $faceConfig) {
+                if ($src = $faceConfig->getFontSrc()) {
+                    $css .= '@import url("' . $this->escapeCSSString($src) . '");' . PHP_EOL;
                 }
             }
         }
+
+        $owner->extend('updateFontImports', $css);
 
         return $css;
     }
 
-    static function getFontFaceCSS()
+    /**
+     * All `@font-face` rules for this site's font families
+     */
+    public function getFontFaceCSS(): string
     {
-        $fontFaceCSS = '';
+        $css = '';
 
-        // Get the current site's config
-        $siteConfig = self::getCurrentSiteConfig();
-        // Get the site's font families
-        $fontFamilies = $siteConfig->ThemeFontFamilies();
-
-        // Loop through the font families
-        foreach ($fontFamilies as $fontFamily) {
-            // Get the font files
-            $files = $fontFamily->ThemeFontFiles();
-            // Get the configurations
-            $configurations = $fontFamily->ThemeFontFaceConfigs();
-            // Loop through the configurations
-            foreach ($configurations as $configuration) {
-                $fontFaceCSS .= $configuration->getFontFaceCSS();
+        foreach ($this->getOwner()->ThemeFontFamilies() as $family) {
+            foreach ($family->ThemeFontFaceConfigs() as $faceConfig) {
+                $css .= $faceConfig->getFontFaceCSS();
             }
         }
 
-        return $fontFaceCSS;
+        $this->getOwner()->extend('updateFontFaceCSS', $css);
+
+        return $css;
     }
 
-    public function generateThemeFontFiles()
+    /**
+     * The `:root` block of font family / bold weight css variables
+     */
+    public function getFontCSSVars(): string
     {
-        // Get the current site's config
-        if ($siteConfig = self::getCurrentSiteConfig()) {
-            // Get the site's ID and append to the CSS file name
-            $styleID = ($siteConfig->ID == 1) ? 'mainsite' : 'subsite-' . $siteConfig->ID;
+        $owner = $this->getOwner();
+        $css = ':root {';
 
-            // Get the site's fonts
-            $families = $siteConfig->ThemeFontFamilies();
-            $configs = $siteConfig->ThemeFontConfigs();
+        foreach ($owner->ThemeFontConfigs() as $config) {
+            $id = $config->getFontConfigKey();
 
-            // If we have fonts
-            if ($families->exists()) {
-                // Get folder path from config
-                $folderPath = Config::inst()->get(SiteConfig::class, 'css_folder_path');
+            // Trim spacing and any trailing ; from the font family
+            $value = rtrim(trim($config->getFontFamily()), ';');
+            if ($value) {
+                $css .= '--font-family-' . $id . ': ' . $value . ';';
+            }
 
-                // If folder doesn't exist, create it
-                if (!file_exists(Director::baseFolder() . $folderPath)) {
-                    mkdir(Director::baseFolder() . $folderPath, 0777, true);
-                }
-
-                $CSSFilePath = Director::baseFolder() . $folderPath;
-                $siteCSSFilePath = $CSSFilePath . $styleID . '-site-fonts.html';
-                $editorCSSFilePath = $CSSFilePath . $styleID . '-editor-fonts.css';
-
-                // Remove files if they exist
-                if (file_exists($siteCSSFilePath)) unlink($siteCSSFilePath);
-                if (file_exists($editorCSSFilePath)) unlink($editorCSSFilePath);
-
-                // Create a new file
-                $CSSVars = ':root {';
-
-                // Loop through font configs and add CSS vars
-                foreach ($configs as $config) {
-                    if ($family = $config->FontFamily) {
-                        // Trim any trailing spacing from the font family
-                        $value = trim($family);
-                        // Remove any ; at the end of the string
-                        $value = rtrim($value, ';');
-
-                        if ($value) {
-                            $id = ($config->FontConfigID) ?: $config->ID;
-                            // Add the CSS var
-                            $CSSVars .= '--font-family-' . $id . ': ' . $value . ';';
-                        }
-                    }
-
-                    if ($config->BoldFontWeight) {
-                        $id = ($config->FontConfigID) ?: $config->ID;
-                        // Add the CSS var
-                        $CSSVars .= '--font-weight-' . $id . '-bold: ' . $config->BoldFontWeight . ';';
-                    }
-                }
-                // Close the file
-                $CSSVars .= '}';
-
-                // Get the font links and add them to the theme styles
-                $siteStyles = self::getFontLinks($siteConfig);
-                $editorStyles = self::getFontImports($siteConfig);
-
-                // Create a new file for the theme
-                $siteStyles .= '<style>';
-                $siteStyles .= $CSSVars;
-                // Create a new file for the editor
-                $editorStyles .= $CSSVars;
-
-                // Loop through fonts and add styles
-                foreach ($families as $family) {
-                    foreach ($family->ThemeFontFaceConfigs() as $fontFace) {
-                        $siteStyles .= $fontFace->getFontFaceCSS();
-                        $editorStyles .= $fontFace->getFontFaceCSS();
-                    }
-                }
-
-                // Loop through font configs and add CSS vars
-                foreach ($configs as $config) {
-                    if ($config->FontFamily) {
-                        $id = ($config->FontConfigID) ?: $config->ID;
-
-                        // Theme styles
-                        $siteStyles .= '.font-family--' . $id . '{';
-                        $siteStyles .= '--_font-weight-max: ' . $config->BoldFontWeight . ';';
-                        $siteStyles .= 'font-family: var(--font-family-' . $id . ');';
-                        $siteStyles .= '}';
-
-                        // Editor styles
-                        $editorStyles .= 'body.mce-content-body .font-family--' . $id . '{';
-                        $editorStyles .= '--_font-weight-max: ' . $config->BoldFontWeight . ';';
-                        $editorStyles .= 'font-family: var(--font-family-' . $id . ');';
-                        $editorStyles .= '}';
-                    }
-                }
-
-                // Close the file
-                $siteStyles .= '</style>';
-
-                // Write to file
-                try {
-                    file_put_contents($siteCSSFilePath, $siteStyles);
-                    file_put_contents($editorCSSFilePath, $editorStyles);
-                } catch (\Exception $e) {
-                    // Handle the exception
-                    error_log('Error writing font files: ' . $e->getMessage());
-                }
+            if ($config->BoldFontWeight) {
+                $css .= '--font-weight-' . $id . '-bold: ' . $config->BoldFontWeight . ';';
             }
         }
+
+        $css .= '}';
+
+        $owner->extend('updateFontCSSVars', $css);
+
+        return $css;
     }
 
-    static function getFontFormatsForTinyMCE()
+    /**
+     * Write the `-site-fonts.html` and `-editor-fonts.css` files for this site. If the site has no
+     * font families any previously generated files are removed.
+     */
+    public function generateThemeFontFiles(): void
     {
-        $formats = [];
+        $owner = $this->getOwner();
+
+        if (!$owner->isInDB()) {
+            return;
+        }
+
+        $siteFilePath = $this->getThemeFontsSiteFilePath();
+        $editorFilePath = $this->getThemeFontsEditorFilePath();
+
+        if (!$owner->ThemeFontFamilies()->exists()) {
+            foreach ([$siteFilePath, $editorFilePath] as $path) {
+                if (is_file($path)) {
+                    unlink($path);
+                }
+            }
+            return;
+        }
+
+        Filesystem::makeFolder($this->getThemeFontsFolderPath());
+
+        $cssVars = $this->getFontCSSVars();
+        $fontFaceCSS = $this->getFontFaceCSS();
+
+        $siteStyles = $this->getFontLinks() . '<style>' . $cssVars . $fontFaceCSS;
+        $editorStyles = $this->getFontImports() . $cssVars . $fontFaceCSS;
+
+        foreach ($owner->ThemeFontConfigs() as $config) {
+            if (!$config->getFontFamily()) {
+                continue;
+            }
+
+            $id = $config->getFontConfigKey();
+            $rules = '--_font-weight-max: ' . $config->BoldFontWeight . ';font-family: var(--font-family-' . $id . ');';
+
+            $siteStyles .= '.font-family--' . $id . '{' . $rules . '}';
+            $editorStyles .= 'body.mce-content-body .font-family--' . $id . '{' . $rules . '}';
+        }
+
+        $siteStyles .= '</style>';
+
+        $owner->extend('updateThemeFontSiteStyles', $siteStyles);
+        $owner->extend('updateThemeFontEditorStyles', $editorStyles);
+
+        foreach ([$siteFilePath => $siteStyles, $editorFilePath => $editorStyles] as $path => $contents) {
+            if (file_put_contents($path, $contents) === false) {
+                Injector::inst()->get(LoggerInterface::class)->error('Theme fonts: unable to write ' . $path);
+            }
+        }
+
+        $owner->extend('onAfterGenerateThemeFontFiles');
+    }
+
+    /**
+     * Create a ThemeFontConfig for each of the `default_fonts` this site doesn't have yet
+     */
+    public function requireDefaultThemeFontConfigs(): void
+    {
+        $owner = $this->getOwner();
+
+        if (!$owner->isInDB()) {
+            return;
+        }
+
+        foreach (ThemeFontConfig::getDefaultFontKeys() as $key) {
+            if ($owner->ThemeFontConfigs()->filter('FontConfigID', $key)->exists()) {
+                continue;
+            }
+
+            $config = ThemeFontConfig::create();
+            $config->Title = $key;
+            $config->FontConfigID = $key;
+            $config->write();
+            $owner->ThemeFontConfigs()->add($config);
+
+            DB::alteration_message("Font Config '$key' created for SiteConfig #{$owner->ID}", 'created');
+        }
+
+        $owner->extend('onAfterRequireDefaultThemeFontConfigs');
+    }
+
+    /**
+     * Items for the TinyMCE `style_formats` option, one per font config with a font family
+     */
+    public function getThemeFontFormats(): array
+    {
+        $owner = $this->getOwner();
         $fontFormats = [];
 
-        // Get the current site's config
-        if ($siteConfig = self::getCurrentSiteConfig()) {
-            // Get the site's fonts
-            $families = $siteConfig->ThemeFontFamilies();
-            $configs = $siteConfig->ThemeFontConfigs();
-            $includedFamilies = [];
-
-            if ($families->exists()) {
-                // Loop through font configs and add CSS vars
-                foreach ($configs as $config) {
-                    // Make sure there is a font family before adding it to the array
-                    if (!$family = $config->ThemeFontFamily()) continue;
-
-                    // Check if the font has a valid ID
-                    if (!$family->ID) continue;
-
-                    // Add the font family to the included families array
-                    $includedFamilies[] = $family->ID;
-
-                    // Get the font config ID
-                    $id = ($config->FontConfigID) ?: $config->ID;
-
-                    // Grab the title and make it title case
-                    $title = $family->Title;
-                    $title = ucwords($title);
-
-                    if (in_array($family->ID, $includedFamilies)) {
-                        $title .= ' (' . ucwords($config->Title) . ')';
-                    }
-
-                    $fontFormats[] = [
-                        'title'          => 'Font Family / ' . $title,
-                        'selector'       => '*',
-                        'classes'        => 'font-family--' . $id,
-                        'wrapper'        => true,
-                        'merge_siblings' => true,
-                    ];
-                }
+        foreach ($owner->ThemeFontConfigs() as $config) {
+            $family = $config->ThemeFontFamily();
+            if (!$family->exists()) {
+                continue;
             }
 
-            // Make the array unique
-
-            $formats[] = [
-                'title' => 'Font Family',
-                'items' => $fontFormats,
+            $fontFormats[] = [
+                'title' => 'Font Family / ' . ucwords((string) $family->Title) . ' (' . ucwords((string) $config->Title) . ')',
+                'selector' => '*',
+                'classes' => 'font-family--' . $config->getFontConfigKey(),
+                'wrapper' => true,
+                'merge_siblings' => true,
             ];
-        };
+        }
+
+        $formats = [[
+            'title' => 'Font Family',
+            'items' => $fontFormats,
+        ]];
+
+        $owner->extend('updateThemeFontFormats', $formats);
 
         return $formats;
     }
 
-    public function onBeforeWrite()
+    /**
+     * Seed default configs for every site on `sake db:build`. The hook runs on the SiteConfig
+     * singleton, after SiteConfig has created its own default record.
+     */
+    protected function onRequireDefaultRecords(): void
     {
-        // Get all the font families
-        $configs = $this->owner->ThemeFontFamilies();
-
-        // Loop all the families
-        foreach ($configs as $family) {
-            $family->write();
-            // Get all the font item
-            $configs = $family->ThemeFontFaceConfigs();
-            // Loop all the items
-            foreach ($configs as $config) {
-                // Write the item
-                $config->write();
-            }
+        foreach (static::getAllSiteConfigs() as $siteConfig) {
+            $siteConfig->requireDefaultThemeFontConfigs();
         }
     }
 
-    public function onAfterWrite()
+    /**
+     * Regenerate every site's font files at the end of `sake db:build`. Replaces the
+     * SS5 `DatabaseAdmin` extension, that class no longer exists.
+     */
+    protected function onAfterBuild(): void
     {
-        // If we have theme font families, but dont have any theme font configs, create them
-        if ($this->owner->ID) {
-            $font = new ThemeFontConfig();
-            $font->requireDefaultRecords();
+        foreach (static::getAllSiteConfigs() as $siteConfig) {
+            $siteConfig->generateThemeFontFiles();
+        }
+    }
+
+    protected function onAfterWrite(): void
+    {
+        $owner = $this->getOwner();
+
+        $owner->requireDefaultThemeFontConfigs();
+        $owner->generateThemeFontFiles();
+    }
+
+    /**
+     * Font families that are assigned to at least one of this site's font configs
+     *
+     * @return ThemeFontFamily[]
+     */
+    protected function getUsedFontFamilies(): array
+    {
+        $families = [];
+
+        foreach ($this->getOwner()->ThemeFontConfigs() as $config) {
+            $familyID = (int) $config->ThemeFontFamilyID;
+            if ($familyID && !isset($families[$familyID])) {
+                $family = $this->getOwner()->ThemeFontFamilies()->byID($familyID);
+                if ($family) {
+                    $families[$familyID] = $family;
+                }
+            }
         }
 
-        self::generateThemeFontFiles();
+        return array_values($families);
+    }
+
+    protected function escapeCSSString(string $value): string
+    {
+        return addcslashes(str_replace(["\r", "\n"], '', $value), '"\\');
     }
 }

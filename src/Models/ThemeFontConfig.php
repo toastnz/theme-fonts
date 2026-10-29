@@ -2,162 +2,146 @@
 
 namespace Toast\ThemeFonts\Models;
 
-use SilverStripe\ORM\DB;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\Security\Member;
 use SilverStripe\SiteConfig\SiteConfig;
-use Toast\ThemeFonts\Models\ThemeFontFamily;
 
+/**
+ * A named font slot (e.g. body, headings) that points to a ThemeFontFamily. Belongs to one SiteConfig.
+ *
+ * @property string $Title
+ * @property string $FontConfigID
+ * @property string $BoldFontWeight
+ * @property int $SortOrder
+ * @property int $ThemeFontFamilyID
+ * @method ThemeFontFamily ThemeFontFamily()
+ */
 class ThemeFontConfig extends DataObject
 {
-    private static $table_name = 'ThemeFontConfig';
+    private static string $table_name = 'ThemeFontConfig';
 
-    private static $singular_name = 'Font Config';
+    private static string $singular_name = 'Font Config';
 
-    private static $plural_name = 'Font Configs';
+    private static string $plural_name = 'Font Configs';
 
-    private static $db = [
+    private static array $db = [
         'Title' => 'Varchar(255)',
-        'FontFamily' => 'Varchar(255)',
-        'FontFamilyID' => 'Int',
         'FontConfigID' => 'Varchar(255)',
-        'BoldFontWeight'  => 'Varchar(64)',
+        'BoldFontWeight' => 'Varchar(64)',
         'SortOrder' => 'Int',
     ];
 
-    private static $has_one = [
+    private static array $has_one = [
         'ThemeFontFamily' => ThemeFontFamily::class,
     ];
 
-    private static $belongs_many_many = [
-        'SiteConfig' => SiteConfig::class
+    private static array $belongs_many_many = [
+        'SiteConfig' => SiteConfig::class . '.ThemeFontConfigs',
     ];
 
-    private static $summary_fields = [
+    private static array $summary_fields = [
         'Title' => 'Title',
         'ThemeFontFamily.FontFamily' => 'Font Family',
     ];
 
-    private static $default_sort = 'ID ASC';
+    private static string $default_sort = 'SortOrder ASC, ID ASC';
 
-    // Method to get the default fonts
-    protected function getDefaultFontFamilys()
+    /**
+     * Names of the font configs created for every site, taken from the `default_fonts` config of
+     * ThemeFontFamily. Entries can be plain strings or single key maps (`- body: null`).
+     *
+     * @return string[]
+     */
+    public static function getDefaultFontKeys(): array
     {
-        $fontFamily = new ThemeFontFamily();
-        $fonts = $fontFamily->config()->get('default_fonts') ?: [];
-        return $fonts;
-    }
+        $keys = [];
 
-    public function getCMSFields()
-    {
-        $fields = parent::getCMSFields();
+        foreach (ThemeFontFamily::config()->get('default_fonts') ?: [] as $index => $entry) {
+            if (is_array($entry)) {
+                $entry = array_key_first($entry);
+            } elseif (!is_int($index)) {
+                $entry = $index;
+            }
 
-        return $fields;
-    }
-
-    static function getCurrentSiteConfig()
-    {
-        if ($siteConfig = DataObject::get_one(SiteConfig::class)) {
-            return $siteConfig;
-        }
-        return;
-    }
-
-    public function isDefaultFont()
-    {
-        if ($this->FontConfigID) return true;
-
-        return false;
-    }
-
-    public function canDelete($member = null)
-    {
-        return !$this->isDefaultFont();
-    }
-
-    public function requireDefaultRecords()
-    {
-        parent::requireDefaultRecords();
-
-        if ($siteConfig = self::getCurrentSiteConfig()) {
-            foreach ($this->getDefaultFontFamilys() as $key) {
-                // Check if the record already exists
-                $existingRecord = $siteConfig->ThemeFontConfigs()->filter([
-                    'FontConfigID' => $key,
-                    'SiteConfig.ID' => $siteConfig->ID
-                ])->first();
-
-                // Skip if the record already exists
-                if ($existingRecord) continue;
-                // $key is an array entry like 'body', 'headings', 'accent'
-                // get the title from the key
-                // check if if $key is an array
-                $keyTitle = $key;
-                if(is_array($key)){
-                    $keyTitle = array_key_first($key);
-                } 
-                // Create the new record
-                $font = new ThemeFontConfig();
-                $font->Title = $keyTitle;
-                $font->FontConfigID = $keyTitle;
-                $font->write();
-                $siteConfig->ThemeFontConfigs()->add($font->ID);
-                DB::alteration_message("Font Config '$keyTitle' created", 'created');
+            if (is_string($entry) && $entry !== '') {
+                $keys[] = $entry;
             }
         }
+
+        $keys = array_values(array_unique($keys));
+
+        ThemeFontFamily::singleton()->extend('updateDefaultFontKeys', $keys);
+
+        return $keys;
     }
 
-    // Helper function to format titles
-    private static function formatFontFileTitle($title)
+    /**
+     * ID => title options for a font family dropdown. Scoped to the given site when provided,
+     * so subsites never see each other's families.
+     *
+     * @return array<int, string>
+     */
+    public static function getFontFamilyArray(?SiteConfig $siteConfig = null): array
     {
-        // Replace hyphens and underscores with spaces
-        $title = str_replace(['-', '_'], ' ', $title);
-        // Insert spaces before capital letters
-        $title = preg_replace('/([a-z])([A-Z])/', '$1 $2', $title);
-        // Capitalize the words
-        $title = ucwords($title);
-        return $title;
-    }
+        $families = $siteConfig ? $siteConfig->ThemeFontFamilies() : ThemeFontFamily::get();
+        $options = [];
 
-    static function getFontFamilyArray()
-    {
-        // Get the ThemeFontFamily
-        $themeFontFamily = ThemeFontFamily::get();
-        // Create an empty array
-        $fontFiles = [];
-
-        // Loop through the ThemeFontFamily
-        foreach ($themeFontFamily as $family) {
-            // Add the formatted FontFile title to the array
-            $fontFiles[$family->ID] = self::formatFontFileTitle($family->Title);
+        foreach ($families as $family) {
+            $options[$family->ID] = ThemeFontFamily::formatTitle((string) $family->Title);
         }
 
-        // Return the array
-        return $fontFiles;
+        ThemeFontFamily::singleton()->extend('updateFontFamilyArray', $options, $siteConfig);
+
+        return $options;
     }
 
-    public function onBeforeWrite()
+    /**
+     * Default fonts are created by the module and can't be deleted or renamed
+     */
+    public function isDefaultFont(): bool
     {
-        parent::onBeforeWrite();
+        return (bool) $this->FontConfigID;
+    }
 
-        // Get the ThemeFontFamily
-        $themeFontFamilies = ThemeFontFamily::get();
+    /**
+     * The identifier used in CSS variable / class names
+     */
+    public function getFontConfigKey(): string
+    {
+        return (string) ($this->FontConfigID ?: $this->ID);
+    }
 
-        // Get the ThemeFontFamily that matches the FontFamilyID
-        $themeFontFamily = $themeFontFamilies->find('ID', $this->FontFamilyID);
+    /**
+     * The font-family CSS value of the assigned family. Always in sync with the family record.
+     */
+    public function getFontFamily(): string
+    {
+        $family = $this->ThemeFontFamily();
+        $value = $family->exists() ? (string) $family->FontFamily : '';
 
-        if ($themeFontFamily) {
-            // Set this item's FontFamily to the ThemeFontFamily FontFamily
-            $this->FontFamily = $themeFontFamily->FontFamily;
-            $this->ThemeFontFamilyID = $themeFontFamily->ID;
-        } else {
-            // Optionally, handle the case where the ThemeFontFamily is not set
-            $this->FontFamily = null;
-            $this->ThemeFontFamilyID = null;
+        $this->extend('updateFontFamily', $value);
+
+        return $value;
+    }
+
+    /**
+     * @deprecated Kept for templates / code written before the `FontFamilyID` column was merged into
+     * the `ThemeFontFamily` relation
+     */
+    public function getFontFamilyID(): int
+    {
+        return (int) $this->ThemeFontFamilyID;
+    }
+
+    /**
+     * @param Member|null $member
+     */
+    public function canDelete($member = null)
+    {
+        if ($this->isDefaultFont()) {
+            return false;
         }
-    }
 
-    public function onAfterWrite()
-    {
-        parent::onAfterWrite();
+        return parent::canDelete($member);
     }
 }

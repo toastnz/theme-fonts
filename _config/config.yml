@@ -1,27 +1,13 @@
 ---
 Name: toastfonts
 ---
-
-Toast\ThemeFonts\Models\ThemeFontFamily:
-  default_fonts:
-    - body
-    - headings
-  available_weights:
-    - 400
-    - 700
-
-PageController:
+SilverStripe\CMS\Controllers\ContentController:
   extensions:
     - Toast\ThemeFonts\Extensions\PageControllerExtension
 
 SilverStripe\SiteConfig\SiteConfig:
   extensions:
     - Toast\ThemeFonts\Extensions\SiteConfigExtension
-  css_folder_path: '/public/assets/styles/'
-
-SilverStripe\ORM\DatabaseAdmin:
-  extensions:
-    - Toast\ThemeFonts\Extensions\DatabaseAdminExtension
 
 SilverStripe\Assets\File:
   allowed_extensions:

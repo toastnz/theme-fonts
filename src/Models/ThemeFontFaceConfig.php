@@ -2,101 +2,137 @@
 
 namespace Toast\ThemeFonts\Models;
 
+use SilverStripe\Assets\File;
 use SilverStripe\ORM\DataObject;
-use SilverStripe\SiteConfig\SiteConfig;
-use Toast\ThemeFonts\Models\ThemeFontFamily;
 
+/**
+ * One `@font-face` rule: a font file of a ThemeFontFamily with the weight / style it applies to.
+ *
+ * @property int $SortOrder
+ * @property string $FontWeight
+ * @property string $FontStyle
+ * @property int $FontFileID
+ * @property int $ThemeFontFamilyID
+ * @method File FontFile()
+ * @method ThemeFontFamily ThemeFontFamily()
+ */
 class ThemeFontFaceConfig extends DataObject
 {
-    private static $table_name = 'ThemeFontFaceConfig';
+    private static string $table_name = 'ThemeFontFaceConfig';
 
-    private static $db = [
+    private static array $db = [
         'SortOrder' => 'Int',
-        'FontFamily' => 'Varchar(255)',
         'FontWeight' => 'Enum("100,200,300,400,500,600,700,800,900", "400")',
         'FontStyle' => 'Enum("normal,italic", "normal")',
-        'FontFileID' => 'Int',
-        'FontSrc' => 'Text',
-        'FontType' => 'Varchar(50)',
     ];
 
-    private static $has_one = [
+    private static array $has_one = [
         'ThemeFontFamily' => ThemeFontFamily::class,
+        'FontFile' => File::class,
     ];
 
-    private static $summary_fields = [
+    private static array $summary_fields = [
         'FontWeight' => 'Font Weight',
         'FontStyle' => 'Font Style',
     ];
 
-    private static $default_sort = 'ID ASC';
+    private static string $default_sort = 'SortOrder ASC, ID ASC';
 
-    public function getCMSFields()
+    /**
+     * Mime type, @font-face format() hint, by lowercase file extension
+     */
+    private static array $font_types = [
+        'woff2' => ['mime' => 'font/woff2', 'format' => 'woff2'],
+        'woff' => ['mime' => 'font/woff', 'format' => 'woff'],
+        'ttf' => ['mime' => 'font/ttf', 'format' => 'truetype'],
+        'otf' => ['mime' => 'font/otf', 'format' => 'opentype'],
+        'eot' => ['mime' => 'application/vnd.ms-fontobject', 'format' => 'embedded-opentype'],
+        'svg' => ['mime' => 'image/svg+xml', 'format' => 'svg'],
+    ];
+
+    /**
+     * The font-family CSS value of the parent family. Always in sync with the family record.
+     */
+    public function getFontFamily(): string
     {
-        $fields = parent::getCMSFields();
+        $family = $this->ThemeFontFamily();
+        $value = $family->exists() ? (string) $family->FontFamily : '';
 
-        return $fields;
+        $this->extend('updateFontFamily', $value);
+
+        return $value;
     }
 
-    static function getCurrentSiteConfig()
+    /**
+     * The font file, only if it is still one of the parent family's files and is published
+     */
+    public function getPublishedFontFile(): ?File
     {
-        if ($siteConfig = DataObject::get_one(SiteConfig::class)) {
-            return $siteConfig;
+        if (!$this->FontFileID || !$this->ThemeFontFamilyID) {
+            return null;
         }
-        return;
-    }
 
-    public function getFontFaceCSS()
-    {
-        $fontFaceCSS = '';
+        /** @var File|null $file */
+        $file = $this->ThemeFontFamily()->ThemeFontFiles()->byID($this->FontFileID);
 
-        // Check if there is a src
-        if ($this->FontSrc) {
-            $fontFamily = explode(',', $this->FontFamily)[0];
-
-            // Strip any quotes from the start and end of the font family name
-            $fontFamily = trim($fontFamily, '"\'');
-
-            $fontFaceCSS = '@font-face {';
-            $fontFaceCSS .= 'font-family: "' . $fontFamily . '";';
-            $fontFaceCSS .= 'font-weight: ' . $this->FontWeight . ';';
-            $fontFaceCSS .= 'font-style: ' . $this->FontStyle . ';';
-            $fontFaceCSS .= 'font-display: swap;';
-            $fontFaceCSS .= 'src: url("' . $this->FontSrc . '");';
-            $fontFaceCSS .= '}';
-        };
-
-        return $fontFaceCSS;
-    }
-
-    public function onBeforeWrite()
-    {
-        parent::onBeforeWrite();
-
-        // Get the ThemeFontFamily
-        $themeFontFamily = $this->ThemeFontFamily();
-
-        $this->FontSrc = null;
-        $this->FontType = null;
-        $this->FontFamily = null;
-
-        if ($themeFontFamily) {
-            // Set this item's FontFamily to the ThemeFontFamily FontFamily
-            $this->FontFamily = $themeFontFamily->FontFamily;
-
-            // Get the FontFileID
-            $fontFileID = $this->FontFileID;
-
-            // Check if the FontFileID is set and the file exists in the ThemeFontFamily's FontFiles
-            if ($fontFileID && $fontFile = $themeFontFamily->ThemeFontFiles()->byID($fontFileID)) {
-                $this->FontSrc = $fontFile->URL;
-                $this->FontType = $fontFile->Extension;
-            }
+        // Draft files are served from the protected assets area, never link them in public css
+        if (!$file || !$file->exists() || !$file->isPublished()) {
+            return null;
         }
+
+        return $file;
     }
 
-    public function onAfterWrite()
+    public function getFontSrc(): string
     {
-        parent::onAfterWrite();
+        $file = $this->getPublishedFontFile();
+        $src = $file ? (string) $file->getURL() : '';
+
+        $this->extend('updateFontSrc', $src);
+
+        return $src;
+    }
+
+    public function getFontType(): string
+    {
+        $file = $this->getPublishedFontFile();
+
+        return $file ? strtolower((string) $file->getExtension()) : '';
+    }
+
+    public function getFontMimeType(): string
+    {
+        $type = $this->getFontType();
+
+        return $this->config()->get('font_types')[$type]['mime'] ?? 'font/' . $type;
+    }
+
+    public function getFontFaceCSS(): string
+    {
+        $src = $this->getFontSrc();
+        $css = '';
+
+        if ($src) {
+            // Only the first family is used for the face, without any quotes
+            $fontFamily = trim(explode(',', $this->getFontFamily())[0], " \t\n\r\0\x0B\"';");
+            $format = $this->config()->get('font_types')[$this->getFontType()]['format'] ?? null;
+
+            $css = '@font-face {';
+            $css .= 'font-family: "' . $this->escapeCSSString($fontFamily) . '";';
+            $css .= 'font-weight: ' . $this->FontWeight . ';';
+            $css .= 'font-style: ' . $this->FontStyle . ';';
+            $css .= 'font-display: swap;';
+            $css .= 'src: url("' . $this->escapeCSSString($src) . '")' . ($format ? ' format("' . $format . '")' : '') . ';';
+            $css .= '}';
+        }
+
+        $this->extend('updateFontFaceCSS', $css);
+
+        return $css;
+    }
+
+    protected function escapeCSSString(string $value): string
+    {
+        return addcslashes(str_replace(["\r", "\n"], '', $value), '"\\');
     }
 }
